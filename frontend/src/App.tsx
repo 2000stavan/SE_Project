@@ -2,6 +2,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/auth/LoginPage';
 import Layout from './components/Layout';
+import InventoryPage from './pages/inventory/InventoryPage';
+import VoiceCommandPage from './pages/voice/VoiceCommandPage';
+import NotificationsPage from './pages/notifications/NotificationsPage';
 import { Boxes, PackageCheck, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 function DashboardOverview() {
@@ -86,13 +89,38 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route
-          path="/*"
+          path="/"
           element={
             <ProtectedRoute>
               <DashboardOverview />
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/inventory"
+          element={
+            <ProtectedRoute>
+              <InventoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/voice"
+          element={
+            <ProtectedRoute>
+              <VoiceCommandPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <NotificationsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AuthProvider>
   );

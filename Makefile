@@ -1,3 +1,6 @@
+export JAVA_HOME := $(shell if [ -d "/opt/homebrew/opt/openjdk@21" ]; then echo "/opt/homebrew/opt/openjdk@21"; elif [ -d "/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home" ]; then echo "/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home"; else /usr/libexec/java_home -v 21 2>/dev/null; fi)
+export PATH := $(JAVA_HOME)/bin:$(PATH)
+
 .PHONY: all up down test test-backend test-frontend seed reset
 
 all: up

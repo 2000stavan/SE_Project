@@ -12,8 +12,9 @@ import java.util.List;
 public interface ProductRepository extends JpaRepository<Product, String> {
     List<Product> findByCategoryIgnoreCase(String category);
 
-    @Query("SELECT p FROM Product p WHERE " +
-           "(:query IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.skuId) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
-           "(:category IS NULL OR LOWER(p.category) = LOWER(:category))")
-    List<Product> searchProducts(@Param("query") String query, @Param("category") String category);
+    @Query("SELECT p FROM Product p WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.skuId) LIKE LOWER(CONCAT('%', :query, '%'))")
+    List<Product> searchByQuery(@Param("query") String query);
+
+    @Query("SELECT p FROM Product p WHERE (LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.skuId) LIKE LOWER(CONCAT('%', :query, '%'))) AND LOWER(p.category) = LOWER(:category)")
+    List<Product> searchByQueryAndCategory(@Param("query") String query, @Param("category") String category);
 }

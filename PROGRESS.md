@@ -4,7 +4,7 @@
 
 - [x] **P0 Setup**: Scaffolding, Docker Compose, Makefile, backend Spring Boot 3.3.5, frontend React + Vite, test tooling, health checks.
 - [x] **P1 Schema + Auth (F1)**: Flyway `V1__init.sql` from `schema.md`, JPA entities (`ddl-auto=validate`), `SchemaMatchesSpecTest`, JWT auth, lockout (5 fails / 15m), sliding session timeout, password reset via Mailpit, RBAC matrix test, `ClassContractTest`.
-- [ ] **P2 Inventory (C1) + Notifications (F2)**: Product/Stock CRUD, row locking, WebSocket sync, voice interpretation and confirmation, low-stock notifications (`Seq1InventoryTest`).
+- [x] **P2 Inventory (C1) + Notifications (F2)**: Product/Stock CRUD, row locking, WebSocket sync, voice interpretation and confirmation, low-stock notifications (`Seq1InventoryTest`).
 - [ ] **P3 Supplier + Purchase Orders (C2)**: Supplier CRUD, PO lifecycle, approvals, receipts, overdue detection (`Seq2PurchaseOrderTest`).
 - [ ] **P4 Sales (C3)**: Physical sale, webhook HMAC verification, stock deductions, PDF invoice generation, returns (`Seq3SalesTest`).
 - [ ] **P5 Forecast + Dashboards (E1)**: In-process Holt-Winters forecasting, reorder recommendations, analytics dashboards.
@@ -13,20 +13,25 @@
 
 ---
 
-### P1: Schema + Auth (F1) Completed
+### P2: Inventory (C1) + Notifications (F2) Completed
 - **Done**:
-  - Implemented Flyway `V1__init.sql` matching `schema.md` DDL verbatim (8 class tables + 2 junction tables).
-  - Seeded reference accounts across all 4 roles in `V2__seed_reference.sql`.
-  - Created JPA entities with `@Table` and `@Column` explicit bindings and Hibernate `ddl-auto=validate`.
-  - Implemented `SchemaMatchesSpecTest` verifying database catalog against `expected-schema.json`.
-  - Built Spring Security 6 stateless JWT architecture with BCrypt password encoding, 30-min sliding expiration header (`X-Refreshed-Token`), in-memory failed attempt cache (`LoginAttemptCache`) with 5 attempts / 15 min lockout (`ACCOUNT_LOCKED`), and password reset token flow.
-  - Implemented `UserService` and `AdministratorService` implementing exact class-diagram operations.
-  - Built `CallTrace` and `CallTraceAspect` for method call recording.
-  - Created `ClassContractTest` reflectively asserting that all 12 class-diagram domain services and operations exist and are public.
-  - Created `RbacMatrixTest` ensuring route-level permissions per `feature.md`.
-  - Updated React frontend with `AuthProvider`, `LoginPage` (supporting 4-role 1-click login and manual inputs), and role-based `Layout` navigation.
-  - Both `./mvnw verify` and `npm run build && npm test` pass 100%.
+  - Implemented `ProductService` with search (name/category/SKU), `addProduct`, `editProduct`, and guarded `deleteProduct` (D7: fails if stock > 0, soft-deactivates).
+  - Implemented `StockRecordService` with `@Lock(LockModeType.PESSIMISTIC_WRITE)` preventing negative stock (BR-3), low-stock reorder detection, and real-time sync dispatch.
+  - Built real-time WebSockets: `StockWebSocketHandler` on `/ws/stock` and `AlertWebSocketHandler` on `/ws/alerts`.
+  - Built outbound channel adapters (`ChannelAdapter`) and stubs (`StubChannelAdapters`).
+  - Implemented `VoiceInterpreter` deterministic grammar parser (`add|remove|set|check <n> [units of] <sku> [to|from|in] [location] <loc>`), with confidence thresholding (< 0.85 requires re-dictation) and confirmation token generation.
+  - Implemented `WarehouseStaffService.captureVoiceCommand`, `confirmVoiceCommand`, and `replayOfflineQueue`.
+  - REST API controllers: `ProductController`, `StockController`, `VoiceController`, `NotificationController`.
+  - Tests:
+    - `VoiceInterpreterTest`: unit tests for valid commands, variants, and rejection of invalid formats.
+    - `StockConcurrencyTest`: 10 concurrent threads deducting stock under pessimistic locking, proving zero overselling / negative stock.
+    - `Seq1InventoryTest`: sequence integration test verifying exact message sequence on `CallTraceAspect` (captureVoiceCommand -> updateStock -> realtimeSync -> sendAudioAlert).
+  - Frontend:
+    - `InventoryPage`: Live product table, stock adjustment modal, real-time WebSocket updates, low-stock alerts.
+    - `VoiceCommandPage`: Web Speech STT/TTS audio synthesis, microphone recording, confirmation prompt, typed command fallback box (CO-4), offline queueing and replay.
+    - `NotificationsPage`: Real-time `/ws/alerts` notification stream and mark-as-read.
+    - Integrated routes into `App.tsx` and updated `Layout.tsx`.
 - **Next**:
-  - Phase P2: Inventory (C1) + Notifications (F2) — Product & Stock CRUD, search, pessimistic row locks, WebSocket real-time sync (`/ws/stock`), voice grammar interpreter (`WarehouseStaff.capture_voice_command` + confirm), low-stock notification & audio alert, and `Seq1InventoryTest`.
+  - Phase P3: Supplier + Purchase Orders (C2) — Supplier CRUD and rating/on-time performance tracking, PurchaseOrder 6-state lifecycle (`Draft`, `Pending Approval`, `Approved`, `Partially Received`, `Received`, `Cancelled`), multi-tier approval rules (`APPROVAL_LIMIT_MANAGER`), supplier credit limit checks (`SUPPLIER_CREDIT_LIMIT`), receipt confirmation updating stock, scheduled hourly overdue check (`triggerShippingDelay`), and `Seq2PurchaseOrderTest`.
 - **Known gaps**:
-  - Voice audio synthesis and WebSocket broadcast handlers to be activated in P2.
+  - None for P2. Ready for Phase P3.
