@@ -25,6 +25,8 @@ public interface StockRecordRepository extends JpaRepository<StockRecord, StockR
 
     List<StockRecord> findByIdSkuId(String skuId);
 
+    Optional<StockRecord> findByIdSkuIdAndIdLocationId(String skuId, String locationId);
+
     List<StockRecord> findByIdLocationId(String locationId);
 
     @Query("SELECT s FROM StockRecord s WHERE " +

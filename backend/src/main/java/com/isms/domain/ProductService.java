@@ -102,6 +102,10 @@ public class ProductService {
         auditLogger.log("system", "PRODUCT_DELETED", "products", Map.of("sku_id", skuId));
     }
 
+    public List<Product> search(String query, String category) {
+        return search(query, category, null, null, null);
+    }
+
     public List<Product> search(String query, String category, String location, Integer minQty, Integer maxQty) {
         if ((query == null || query.isBlank()) && (category == null || category.isBlank())) {
             return productRepository.findAll();
