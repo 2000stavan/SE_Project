@@ -7,9 +7,43 @@
 - [x] **P2 Inventory (C1) + Notifications (F2)**: Product/Stock CRUD, row locking, WebSocket sync, voice interpretation and confirmation, low-stock notifications (`Seq1InventoryTest`).
 - [x] **P3 Supplier + Purchase Orders (C2)**: Supplier CRUD, PO lifecycle, approvals, receipts, overdue detection (`Seq2PurchaseOrderTest`).
 - [x] **P4 Sales (C3)**: Physical sale, webhook HMAC verification, stock deductions, PDF invoice generation, returns (`Seq3SalesTest`).
-- [ ] **P5 Forecast + Dashboards (E1)**: In-process Holt-Winters forecasting, reorder recommendations, analytics dashboards.
+- [x] **P5 Forecast + Dashboards (E1)**: In-process Holt-Winters forecasting, reorder recommendations, analytics dashboards.
 - [ ] **P6 Admin + Polish (E2, E3)**: User/role management, marketplace simulation, contextual help, empty/error UI states.
 - [ ] **P7 Hardening + Docs**: Traceability matrix, NFR validation, final documentation and demo walkthrough verification.
+
+---
+
+### P5: Forecast + Dashboards (E1) Completed
+- **Done**:
+  - Implemented `ForecastService`:
+    - Hand-written in-process Holt-Winters additive exponential smoothing algorithm ($\alpha=0.2$, $\beta=0.1$, $\gamma=0.2$, $m=7$) with seasonal-naive fallback when data series $< 14$ days.
+    - Demand forecasting (`Forecast.generateDemand`) per SKU/location, storing predictions in `forecasts` composite table `(sku_id, location_id, forecast_period)`.
+    - Seasonality detection (`Forecast.detectSeasonality`) identifying weekly/daily cycles.
+    - Reorder recommendations (`Forecast.recommendReorder`) incorporating supplier lead time, demand forecasts, safety buffers, and current stock on hand.
+    - Automated 1-Click Purchase Order draft generator (`Forecast.Reorder.Suggest` / `getReorderSuggestions()`) providing pre-filled PO payloads for SKUs near or below reorder thresholds.
+    - Revenue analytics (`getRevenueAnalytics`): groups revenue and order count by channel (`In-Store`, `Amazon`, `Shopify`, etc.), warehouse location, or date period, computing total gross revenue and average order value (AOV).
+    - Stock analytics (`getStockAnalytics`): classifies inventory into low-stock, out-of-stock, and overstock ($> 3\times$ threshold), and calculates total units and inventory valuation.
+    - Scheduled background job support (`@Scheduled(cron = "${isms.forecast.cron}")`) and on-demand trigger.
+  - REST API Controllers:
+    - `ForecastController` (`/api/v1/forecast`, `/api/v1/forecast/run`, `/api/v1/forecast/reorder-suggestions`).
+    - `AnalyticsController` (`/api/v1/analytics/revenue`, `/api/v1/analytics/stock`).
+  - Tests:
+    - `ForecastTest`: 3 tests passing:
+      1. Complete forecast pipeline execution asserted with `CallTrace` order: `ForecastService.generateDemand` &rarr; `ForecastService.detectSeasonality` &rarr; `ForecastService.recommendReorder`.
+      2. Reorder suggestions accurately detect stock $\le$ reorder point and generate pre-filled PO draft payloads.
+      3. Stock analytics returns verified unit counts, product metrics, and inventory valuations.
+    - Total test suite: 46/46 backend tests passing, frontend smoke test passing.
+  - Frontend:
+    - `ForecastPage.tsx`: Interactive dashboard featuring:
+      - Demand Forecasts table with search filters and seasonality badges.
+      - 1-Click Reorder Suggestions cards with stock deficit meters and direct "Create Draft PO" triggers.
+      - Revenue Analytics dashboard with group-by toggles (Channel, Location, Date), stat cards, and percentage distribution bars.
+      - Stock & Inventory view featuring inventory valuation, low stock alert tables, and overstock monitors.
+    - Routed `/forecast` in `App.tsx` and navbar.
+- **Next**:
+  - Phase P6: Admin + Polish (E2, E3) — User administration (list, create, deactivate user, role assignment, unlock locked users), supplier deactivation safeguards UI, system settings screen (read-only), onboarding guide / contextual help (UD-1, UD-2), inline form validation, and standalone marketplace simulation CLI script (`scripts/simulate_marketplace.sh`).
+- **Known gaps**:
+  - None for P5. Ready for Phase P6.
 
 ---
 
