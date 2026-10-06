@@ -1,0 +1,52 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: isms-backend
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/isms}
+    username: ${SPRING_DATASOURCE_USERNAME:isms}
+    password: ${SPRING_DATASOURCE_PASSWORD:isms}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  mail:
+    host: ${SPRING_MAIL_HOST:localhost}
+    port: ${SPRING_MAIL_PORT:1025}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+isms:
+  jwt:
+    secret: ${JWT_SECRET:change-me-at-least-32-bytes-long-secret-key-super-secure-token!}
+    idle-minutes: ${SESSION_IDLE_MINUTES:30}
+  auth:
+    max-failed-attempts: ${LOGIN_MAX_FAILS:5}
+    fail-window-minutes: ${LOGIN_FAIL_WINDOW_MINUTES:15}
+  voice:
+    confidence-threshold: ${VOICE_CONFIDENCE_THRESHOLD:0.75}
+  limits:
+    approval-limit-manager: ${APPROVAL_LIMIT_MANAGER:100000}
+    supplier-credit-limit: ${SUPPLIER_CREDIT_LIMIT:500000}
+  tax-rate: ${TAX_RATE:0.18}
+  audio-alert-max-volume: ${AUDIO_ALERT_MAX_VOLUME:0.6}
+  marketplace-secrets: ${MARKETPLACE_SECRETS:{"amazon":"secret1","flipkart":"secret2"}}
+  storage-dir: ${STORAGE_DIR:./storage}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

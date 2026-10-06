@@ -1,0 +1,71 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: isms-db
+    environment:
+      POSTGRES_USER: isms
+      POSTGRES_PASSWORD: isms
+      POSTGRES_DB: isms
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U isms -d isms"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: isms-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: isms-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/isms
+      SPRING_DATASOURCE_USERNAME: isms
+      SPRING_DATASOURCE_PASSWORD: isms
+      SPRING_MAIL_HOST: mailpit
+      SPRING_MAIL_PORT: 1025
+      JWT_SECRET: change-me-at-least-32-bytes-long-secret-key-super-secure-token!
+      SESSION_IDLE_MINUTES: 30
+      LOGIN_MAX_FAILS: 5
+      LOGIN_FAIL_WINDOW_MINUTES: 15
+      VOICE_CONFIDENCE_THRESHOLD: 0.75
+      APPROVAL_LIMIT_MANAGER: 100000
+      SUPPLIER_CREDIT_LIMIT: 500000
+      TAX_RATE: 0.18
+      AUDIO_ALERT_MAX_VOLUME: 0.6
+      MARKETPLACE_SECRETS: '{"amazon":"secret1","flipkart":"secret2"}'
+      STORAGE_DIR: /app/storage
+      SPRING_PROFILES_ACTIVE: demo
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    volumes:
+      - invoice_storage:/app/storage
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: isms-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  invoice_storage:
