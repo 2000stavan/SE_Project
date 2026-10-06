@@ -1,55 +1,99 @@
-import { Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import LoginPage from './pages/auth/LoginPage';
+import Layout from './components/Layout';
+import { Boxes, PackageCheck, AlertTriangle, ShieldCheck } from 'lucide-react';
+
+function DashboardOverview() {
+  const { user } = useAuth();
+  if (!user) return null;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800 pb-5">
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight">
+            Welcome back, {user.name}
+          </h1>
+          <p className="text-xs text-slate-400 mt-1">
+            Logged in as <span className="font-semibold text-emerald-400">{user.role}</span> ({user.userId})
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/50">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-slate-400 font-medium">Session Status</span>
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          </div>
+          <div className="text-xl font-bold text-white">Active (30m Sliding)</div>
+          <p className="text-[10px] text-slate-500 mt-1">Automatic sliding renewal enabled</p>
+        </div>
+
+        <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/50">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-slate-400 font-medium">Assigned Role</span>
+            <PackageCheck className="w-4 h-4 text-blue-400" />
+          </div>
+          <div className="text-xl font-bold text-white">{user.role}</div>
+          <p className="text-[10px] text-slate-500 mt-1">Role-based access enforced (F1.4)</p>
+        </div>
+
+        <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/50">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-slate-400 font-medium">Database Schema</span>
+            <Boxes className="w-4 h-4 text-purple-400" />
+          </div>
+          <div className="text-xl font-bold text-white">Validated (V1 + V2)</div>
+          <p className="text-[10px] text-slate-500 mt-1">10 tables mapped via schema.md</p>
+        </div>
+
+        <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/50">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-slate-400 font-medium">Security Guard</span>
+            <AlertTriangle className="w-4 h-4 text-amber-400" />
+          </div>
+          <div className="text-xl font-bold text-white">5 Fails / 15m Lock</div>
+          <p className="text-[10px] text-slate-500 mt-1">Lockout protection active</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProtectedRoute({ children }: { children: JSX.Element }) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 text-xs">
+        Loading session...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Layout>{children}</Layout>;
+}
 
 export default function App() {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-900 text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center font-bold text-slate-950">
-            IS
-          </div>
-          <span className="font-semibold text-lg tracking-wide">ISMS</span>
-          <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded">v1.0.0</span>
-        </div>
-        <nav className="flex items-center space-x-4 text-sm text-slate-400">
-          <Link to="/" className="hover:text-emerald-400 transition-colors">Overview</Link>
-          <Link to="/login" className="hover:text-emerald-400 transition-colors">Login</Link>
-        </nav>
-      </header>
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <div className="max-w-2xl mt-12">
-                <h1 className="text-3xl font-bold text-white mb-3">Inventory and Stock Management System</h1>
-                <p className="text-slate-400 mb-6">
-                  Phase P0 Scaffolding Ready. Multi-role inventory platform with real-time sync, voice commands, PO tracking, and sales processing.
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/50">
-                    <h3 className="font-medium text-emerald-400 mb-1">Backend</h3>
-                    <p className="text-xs text-slate-400">Spring Boot 3.3.5 • PostgreSQL 16 • Flyway</p>
-                  </div>
-                  <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/50">
-                    <h3 className="font-medium text-emerald-400 mb-1">Frontend</h3>
-                    <p className="text-xs text-slate-400">React 18 • Vite • TypeScript • Tailwind</p>
-                  </div>
-                </div>
-              </div>
-            }
-          />
-          <Route
-            path="/login"
-            element={
-              <div className="max-w-md mx-auto mt-16 p-6 rounded-2xl border border-slate-800 bg-slate-950/60 shadow-xl">
-                <h2 className="text-xl font-bold text-white mb-4">Sign in to ISMS</h2>
-                <p className="text-xs text-slate-400 mb-6">Authentication module will be activated in Phase P1.</p>
-              </div>
-            }
-          />
-        </Routes>
-      </main>
-    </div>
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <DashboardOverview />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </AuthProvider>
   );
 }

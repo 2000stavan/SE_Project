@@ -1,0 +1,19 @@
+package com.isms.repository;
+
+import com.isms.model.Product;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface ProductRepository extends JpaRepository<Product, String> {
+    List<Product> findByCategoryIgnoreCase(String category);
+
+    @Query("SELECT p FROM Product p WHERE " +
+           "(:query IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.skuId) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
+           "(:category IS NULL OR LOWER(p.category) = LOWER(:category))")
+    List<Product> searchProducts(@Param("query") String query, @Param("category") String category);
+}

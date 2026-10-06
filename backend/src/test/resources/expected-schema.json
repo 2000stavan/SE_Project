@@ -1,0 +1,26 @@
+{
+  "tables": [
+    "users",
+    "suppliers",
+    "products",
+    "stock_records",
+    "forecasts",
+    "purchase_orders",
+    "po_line_items",
+    "sales_orders",
+    "sales_order_line_items",
+    "notifications"
+  ],
+  "columns": {
+    "users": ["user_id", "name", "email", "role", "hashed_password", "status"],
+    "suppliers": ["supplier_id", "name", "contact_details", "rating", "lead_time", "procurement_history", "is_active"],
+    "products": ["sku_id", "name", "category", "unit_price", "reorder_point", "unit_of_measure"],
+    "stock_records": ["sku_id", "location_id", "quantity_on_hand", "quantity_reserved", "last_updated"],
+    "forecasts": ["sku_id", "location_id", "forecast_period", "predicted_demand", "recommended_reorder_qty"],
+    "purchase_orders": ["po_id", "supplier_id", "status", "order_date", "expected_date", "manager_id", "warehouse_staff_id"],
+    "po_line_items": ["po_id", "sku_id", "quantity_ordered", "quantity_received", "last_received_at"],
+    "sales_orders": ["order_id", "channel", "customer_info", "status", "payment_reference", "created_at"],
+    "sales_order_line_items": ["order_id", "sku_id", "location_id", "quantity", "unit_price"],
+    "notifications": ["notification_id", "user_id", "type", "channel", "message", "timestamp", "status"]
+  }
+}
