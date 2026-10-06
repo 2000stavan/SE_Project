@@ -49,10 +49,10 @@ make down
 
 | Role | User ID | Email | Password | Primary Permissions |
 |---|---|---|---|---|
-| **Administrator** | `USR-ADMIN-1` | `admin@isms.com` | `admin123` | User provisioning, RBAC role assignment, account unlocking, settings, unlimited PO approvals |
-| **Manager** | `USR-MGR-1` | `manager1@isms.com` | `manager123` | PO approvals up to $50,000, demand forecasting, 1-click PO drafts, revenue & stock analytics |
-| **Warehouse Staff** | `USR-STAFF-1` | `warehouse1@isms.com` | `staff123` | Voice-driven inventory adjustments, PO goods receipt confirmation, low-stock alerts |
-| **Sales Personnel** | `USR-SALES-1` | `sales1@isms.com` | `sales123` | Barcode POS terminal, customer returns, invoice generation & downloads |
+| **Administrator** | `USR-ADMIN-1` | `admin@isms.com` | `Password123!` | User provisioning, RBAC role assignment, account unlocking, settings, unlimited PO approvals |
+| **Manager** | `USR-MGR-1` | `manager1@isms.com` | `Password123!` | PO approvals up to $50,000, demand forecasting, 1-click PO drafts, revenue & stock analytics |
+| **Warehouse Staff** | `USR-WH-1` | `warehouse1@isms.com` | `Password123!` | Voice-driven inventory adjustments, PO goods receipt confirmation, low-stock alerts |
+| **Sales Personnel** | `USR-SALES-1` | `sales1@isms.com` | `Password123!` | Barcode POS terminal, customer returns, invoice generation & downloads |
 
 ---
 
