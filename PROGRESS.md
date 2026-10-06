@@ -8,8 +8,35 @@
 - [x] **P3 Supplier + Purchase Orders (C2)**: Supplier CRUD, PO lifecycle, approvals, receipts, overdue detection (`Seq2PurchaseOrderTest`).
 - [x] **P4 Sales (C3)**: Physical sale, webhook HMAC verification, stock deductions, PDF invoice generation, returns (`Seq3SalesTest`).
 - [x] **P5 Forecast + Dashboards (E1)**: In-process Holt-Winters forecasting, reorder recommendations, analytics dashboards.
-- [ ] **P6 Admin + Polish (E2, E3)**: User/role management, marketplace simulation, contextual help, empty/error UI states.
+- [x] **P6 Admin + Polish (E2, E3)**: User/role management, marketplace simulation, contextual help, empty/error UI states.
 - [ ] **P7 Hardening + Docs**: Traceability matrix, NFR validation, final documentation and demo walkthrough verification.
+
+---
+
+### P6: Admin + Polish (E2, E3) Completed
+- **Done**:
+  - Implemented `AdministratorService` & `UserController`:
+    - User management: List users (`GET /api/v1/users`), Create user with BCrypt password hashing (`POST /api/v1/users`), RBAC Role Assignment (`PATCH /api/v1/users/{id}/role` calling `Administrator.assign_role`), and User activation / deactivation / account unlocking (`PATCH /api/v1/users/{id}/status`).
+    - Unlocking an account resets consecutive failed attempts in `LoginAttemptCache`.
+    - Supplier deactivation safeguards (`Administrator.deactivate_supplier` / `POST /api/v1/suppliers/{id}/deactivate`) with 409 Conflict if active or open POs exist (BR-5).
+  - Implemented `SettingsController` (`GET /api/v1/settings`):
+    - Exposes read-only global environment limits and thresholds: Manager approval limit ($50,000), Supplier credit exposure limit ($100,000), Lockout policy (5 fails / 15m), Session idle timeout (30m sliding), Voice recognition confidence (80%), Audio alert volume cap (80%), Storage path, and Tax rate.
+  - Quality & Demo Tooling:
+    - `scripts/simulate_marketplace.sh`: Executable CLI tool computing real HMAC-SHA256 signatures over marketplace order payloads and posting directly to `/api/v1/sales/webhook/{marketplace}`.
+    - `scripts/load_test.sh`: Performance benchmark testing concurrent requests, calculating p95 latency and verifying PE-1 / PE-3 compliance.
+  - Tests:
+    - `AdminTest`: 3 tests passing:
+      1. User creation, status updates, unlocking, and duplicate ID prevention.
+      2. Role assignment across RBAC spectrum.
+      3. User directory listing.
+    - Total test suite: 49/49 backend tests passing, frontend Vitest passing.
+  - Frontend:
+    - `UsersPage.tsx`: User Directory with role filter and search, Add User modal with inline form validation (UI-4), Change Role modal (E2.2), Activate/Deactivate/Unlock actions (E2.1), Read-Only System Configuration cards (E2.4), and Interactive Role Onboarding Guide modal (UD-1, UD-2).
+    - Registered `/users` route in `App.tsx` and sidebar.
+- **Next**:
+  - Phase P7: Hardening + Docs — NFR validation tests, final comprehensive `docs/traceability.md` mapping SRS tags &rarr; implementation files &rarr; test classes, walkthrough demo verification, and final cleanup.
+- **Known gaps**:
+  - None for P6. Ready for Phase P7.
 
 ---
 
