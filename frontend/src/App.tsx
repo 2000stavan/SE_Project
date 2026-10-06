@@ -7,6 +7,7 @@ import VoiceCommandPage from './pages/voice/VoiceCommandPage';
 import NotificationsPage from './pages/notifications/NotificationsPage';
 import SuppliersPage from './pages/suppliers/SuppliersPage';
 import PurchaseOrdersPage from './pages/purchaseOrders/PurchaseOrdersPage';
+import SalesPage from './pages/sales/SalesPage';
 import { Boxes, PackageCheck, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 function DashboardOverview() {
@@ -127,6 +128,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <PurchaseOrdersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sales"
+          element={
+            <ProtectedRoute>
+              <SalesPage />
             </ProtectedRoute>
           }
         />

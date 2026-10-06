@@ -13,6 +13,7 @@ import java.util.List;
 @Repository
 public interface SalesOrderRepository extends JpaRepository<SalesOrder, String> {
     List<SalesOrder> findByChannel(String channel);
+    List<SalesOrder> findAllByOrderByCreatedAtDesc();
 
     @Query("SELECT so FROM SalesOrder so WHERE " +
            "(:channel IS NULL OR so.channel = :channel) AND " +

@@ -6,10 +6,43 @@
 - [x] **P1 Schema + Auth (F1)**: Flyway `V1__init.sql` from `schema.md`, JPA entities (`ddl-auto=validate`), `SchemaMatchesSpecTest`, JWT auth, lockout (5 fails / 15m), sliding session timeout, password reset via Mailpit, RBAC matrix test, `ClassContractTest`.
 - [x] **P2 Inventory (C1) + Notifications (F2)**: Product/Stock CRUD, row locking, WebSocket sync, voice interpretation and confirmation, low-stock notifications (`Seq1InventoryTest`).
 - [x] **P3 Supplier + Purchase Orders (C2)**: Supplier CRUD, PO lifecycle, approvals, receipts, overdue detection (`Seq2PurchaseOrderTest`).
-- [ ] **P4 Sales (C3)**: Physical sale, webhook HMAC verification, stock deductions, PDF invoice generation, returns (`Seq3SalesTest`).
+- [x] **P4 Sales (C3)**: Physical sale, webhook HMAC verification, stock deductions, PDF invoice generation, returns (`Seq3SalesTest`).
 - [ ] **P5 Forecast + Dashboards (E1)**: In-process Holt-Winters forecasting, reorder recommendations, analytics dashboards.
 - [ ] **P6 Admin + Polish (E2, E3)**: User/role management, marketplace simulation, contextual help, empty/error UI states.
 - [ ] **P7 Hardening + Docs**: Traceability matrix, NFR validation, final documentation and demo walkthrough verification.
+
+---
+
+### P4: Process Sales (C3) Completed
+- **Done**:
+  - Implemented `SalesPersonnelService.logPhysicalSale`: pre-checks product catalogue per Sequence 3 trace, creates order via `SalesOrderService.createOrder`.
+  - Implemented `SalesOrderService`:
+    - Physical sale workflow with atomic stock deduction via `StockRecordService.deductStock()` under pessimistic row lock (`PESSIMISTIC_WRITE`).
+    - OpenPDF invoice generation to `storage/invoices/{order_id}.pdf` with layout containing header, order ID, payment method, line items breakdown, total due, and company info.
+    - Idempotent marketplace webhook ingest (`POST /api/v1/sales/webhook/{marketplace}`) verifying HMAC-SHA256 signatures via `X-Signature` header against configurable channel secret (`ISMS_MARKETPLACE_WEBHOOK_SECRET`).
+    - Handled marketplace event types: `order-created`, `order-paid`, `order-cancelled`, `order-returned`.
+    - Returns workflow (`processReturn`): reverses inventory levels via `StockRecordService.updateStock` and transitions order status to `Returned`.
+    - Developer simulation endpoint (`POST /api/v1/dev/simulate-marketplace-order`) for demo and automated testing.
+  - REST API controllers: `SalesController` (`/api/v1/sales`, `/api/v1/sales/physical`, `/api/v1/sales/webhook/{marketplace}`, `/api/v1/sales/{id}/return`, `/api/v1/sales/{id}/invoice`, `/api/v1/dev/simulate-marketplace-order`).
+  - Tests:
+    - `Seq3SalesTest`: 4 tests passing:
+      1. Sequence 3 message order verified via `CallTraceAspect` (`SalesPersonnel.logPhysicalSale` -> `Product.search` -> `SalesOrder.createOrder` -> `StockRecord.deductStock` -> `SalesOrder.generateInvoice`).
+      2. Insufficient stock rejection prevents order creation and preserves stock levels.
+      3. Order return workflow verified (`SalesOrder.processReturn` -> `StockRecord.updateStock`).
+      4. Generated OpenPDF invoice file exists on filesystem, is non-empty, and valid PDF.
+    - `WebhookSecurityTest`: 4 tests passing:
+      1. Valid HMAC-SHA256 signature accepted with 200/201 and stock deducted.
+      2. Invalid signature rejected with 401 Unauthorized.
+      3. Missing signature rejected with 401 Unauthorized.
+      4. Duplicate webhook delivery handled idempotently without double-deduction.
+  - Frontend:
+    - `SalesPage.tsx`: POS terminal with barcode-wedge / product search input, cart management, checkout with payment method selection, order history table, return order modal with per-item quantity restock, and interactive marketplace webhook HMAC simulator with JSON payload viewer.
+    - Integrated `/sales` route in `App.tsx` and navbar.
+  - Full suite passes: `make test` runs 43 backend tests and frontend Vitest with 0 failures.
+- **Next**:
+  - Phase P5: Forecast + Dashboards (E1) — In-process Holt-Winters additive exponential smoothing algorithm with seasonal-naive fallback, reorder recommendations (`/forecast/reorder-suggestions`), analytics endpoints (`/analytics/revenue`, `/analytics/stock`), and visual charts in frontend.
+- **Known gaps**:
+  - None for P4. Ready for Phase P5.
 
 ---
 

@@ -62,6 +62,16 @@ public class NotificationService {
                 });
     }
 
+    public void triggerInsufficientStock(String skuId, String orderId) {
+        String msg = "Sales order " + orderId + " cannot be processed: Insufficient stock for SKU " + skuId;
+        userRepository.findAll().stream()
+                .filter(u -> u.getRole().getValue().equals("Manager"))
+                .forEach(u -> {
+                    createNotification(u, NotificationType.LOW_STOCK, NotificationChannel.EMAIL, msg);
+                    mailerAdapter.sendEmail(u.getEmail(), "ISMS Insufficient Stock: Order " + orderId, msg);
+                });
+    }
+
     public void sendAudioAlert(String message, double maxVolume) {
         alertWebSocketHandler.broadcastAudioAlert(message, maxVolume);
     }

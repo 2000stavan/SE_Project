@@ -45,5 +45,7 @@ Thumbs.db
 
 ### Local env ###
 .env
-storage/invoices/*.pdf
-!storage/invoices/.gitkeep
+**/storage/invoices/*.pdf
+!**/storage/invoices/.gitkeep
+backend/storage/invoices/*.pdf
+!backend/storage/invoices/.gitkeep
