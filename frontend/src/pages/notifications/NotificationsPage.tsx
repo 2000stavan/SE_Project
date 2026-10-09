@@ -76,90 +76,72 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800 pb-5">
+    <div>
+      {/* Header */}
+      <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'space-between', gap:12, borderBottom:'1px solid var(--color-hairline)', paddingBottom:20, marginBottom:24 }}>
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
-            <Bell className="w-6 h-6 text-emerald-400" />
-            Alerts & Notifications
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            System notifications, low-stock reorder warnings, and broadcast alerts (F2)
-          </p>
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
+            <Bell size={22} color="var(--color-primary)" strokeWidth={1.5} />
+            <span className="text-heading-lg" style={{ color:'var(--color-ink)' }}>Alerts &amp; Notifications</span>
+          </div>
+          <div style={{ fontSize:14, color:'var(--color-ink-mute)', fontWeight:300 }}>System notifications, low-stock warnings, and broadcast alerts via WebSocket (F2)</div>
         </div>
-        <div className="flex items-center gap-2">
-          <span
-            className={`w-2.5 h-2.5 rounded-full ${
-              wsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'
-            }`}
-          />
-          <span className="text-xs text-slate-400">
-            {wsConnected ? 'Live stream connected (/ws/alerts)' : 'Stream standby'}
-          </span>
+        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 12px', borderRadius:'var(--radius-pill)', border:'1px solid var(--color-hairline)', backgroundColor:'var(--color-canvas-soft)' }}>
+          <span style={{ width:8, height:8, borderRadius:'50%', backgroundColor: wsConnected ? '#16a34a' : 'var(--color-ink-mute)', display:'inline-block', boxShadow: wsConnected ? '0 0 0 3px rgba(22,163,74,0.18)' : 'none' }} />
+          <span style={{ fontSize:12, color:'var(--color-ink-mute)', fontWeight:300 }}>{wsConnected ? 'Live /ws/alerts connected' : 'WebSocket standby'}</span>
         </div>
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-xs text-slate-500">Loading notifications...</div>
+        <div style={{ textAlign:'center', padding:48, color:'var(--color-ink-mute)', fontSize:14 }}>Loading notifications&hellip;</div>
       ) : notifications.length === 0 ? (
-        <div className="p-8 rounded-xl border border-slate-800 bg-slate-900/40 text-center">
-          <CheckCircle2 className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-          <p className="text-sm text-slate-300 font-medium">Inbox is empty</p>
-          <p className="text-xs text-slate-500 mt-1">No alerts or notifications recorded yet.</p>
+        <div style={{ padding:48, border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', textAlign:'center', backgroundColor:'var(--color-canvas-soft)' }}>
+          <CheckCircle2 size={32} color="var(--color-ink-mute)" style={{ margin:'0 auto 10px' }} />
+          <div style={{ fontSize:16, fontWeight:400, color:'var(--color-ink)', marginBottom:4 }}>Inbox is clear</div>
+          <div style={{ fontSize:14, color:'var(--color-ink-mute)', fontWeight:300 }}>No alerts or notifications recorded yet.</div>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {notifications.map((item) => {
             const isUnread = item.status === 'Unread';
             const isLowStock = item.type === 'LOW_STOCK';
             return (
-              <div
-                key={item.notificationId}
-                className={`p-4 rounded-xl border transition flex items-start justify-between gap-4 ${
-                  isUnread
-                    ? 'border-emerald-800/60 bg-emerald-950/20 shadow-sm'
-                    : 'border-slate-800 bg-slate-900/40'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`p-2 rounded-lg mt-0.5 ${
-                      isLowStock
-                        ? 'bg-amber-950/70 text-amber-400'
-                        : 'bg-emerald-950/70 text-emerald-400'
-                    }`}
-                  >
-                    {isLowStock ? (
-                      <AlertTriangle className="w-4 h-4" />
-                    ) : (
-                      <Info className="w-4 h-4" />
-                    )}
+              <div key={item.notificationId}
+                style={{
+                  padding:16, borderRadius:'var(--radius-lg)', border:'1px solid',
+                  borderColor: isUnread ? (isLowStock ? '#fde68a' : 'rgba(83,58,253,0.35)') : 'var(--color-hairline)',
+                  backgroundColor: isUnread ? (isLowStock ? '#fffbeb' : 'rgba(83,58,253,0.03)') : 'var(--color-canvas-soft)',
+                  display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16,
+                  boxShadow: isUnread ? 'var(--shadow-1)' : 'none', transition:'background 0.15s',
+                }}>
+                <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
+                  <div style={{ padding:8, borderRadius:8, marginTop:2, flexShrink:0,
+                    backgroundColor: isLowStock ? '#fef9c3' : 'rgba(83,58,253,0.08)',
+                    color: isLowStock ? '#92400e' : 'var(--color-primary)' }}>
+                    {isLowStock ? <AlertTriangle size={14} /> : <Info size={14} />}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-white uppercase tracking-wider">
+                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:5 }}>
+                      <span className="pill-tag" style={{ fontSize:9,
+                        backgroundColor: isLowStock ? '#fef9c3' : 'rgba(83,58,253,0.08)',
+                        color: isLowStock ? '#92400e' : 'var(--color-primary)',
+                        borderColor: isLowStock ? '#fde68a' : 'rgba(83,58,253,0.25)' }}>
                         {item.type}
                       </span>
                       {isUnread && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                          NEW
-                        </span>
+                        <span style={{ fontSize:9, padding:'2px 6px', borderRadius:4, backgroundColor:'rgba(83,58,253,0.12)', color:'var(--color-primary)', fontWeight:400, letterSpacing:'0.06em' }}>NEW</span>
                       )}
                     </div>
-                    <p className="text-sm text-slate-200 mt-1">{item.message}</p>
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-2">
-                      <Clock className="w-3 h-3" />
-                      <span>{new Date(item.createdAt).toLocaleString()}</span>
+                    <div style={{ fontSize:14, color:'var(--color-ink)', fontWeight:300, marginBottom:6 }}>{item.message}</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'var(--color-ink-mute)' }}>
+                      <Clock size={11} />
+                      <span className="tnum">{new Date(item.createdAt).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
-
                 {isUnread && (
-                  <button
-                    onClick={() => handleMarkAsRead(item.notificationId)}
-                    className="shrink-0 text-xs text-emerald-400 hover:text-emerald-300 px-2.5 py-1 rounded border border-emerald-800/60 hover:bg-emerald-950/40 transition"
-                  >
-                    Mark as read
+                  <button onClick={() => handleMarkAsRead(item.notificationId)} className="btn-ghost-sm" style={{ fontSize:12, flexShrink:0 }}>
+                    Mark read
                   </button>
                 )}
               </div>

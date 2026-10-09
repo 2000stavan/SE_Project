@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -11,7 +11,9 @@ import {
   Mic,
   LogOut,
   Building2,
-  HelpCircle,
+  BookOpen,
+  Menu,
+  X,
 } from 'lucide-react';
 
 interface NavItem {
@@ -22,102 +24,219 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Inventory', path: '/inventory', icon: Boxes, roles: ['Administrator', 'Manager', 'Warehouse Staff', 'Sales Personnel'] },
-  { label: 'Voice Command', path: '/voice', icon: Mic, roles: ['Administrator', 'Manager', 'Warehouse Staff'] },
-  { label: 'Suppliers', path: '/suppliers', icon: Building2, roles: ['Administrator', 'Manager'] },
-  { label: 'Purchase Orders', path: '/purchase-orders', icon: ClipboardList, roles: ['Administrator', 'Manager', 'Warehouse Staff'] },
-  { label: 'Sales & POS', path: '/sales', icon: ShoppingCart, roles: ['Administrator', 'Manager', 'Sales Personnel'] },
-  { label: 'Forecast & Analytics', path: '/forecast', icon: TrendingUp, roles: ['Administrator', 'Manager'] },
-  { label: 'User Admin', path: '/users', icon: Users, roles: ['Administrator'] },
-  { label: 'Notifications', path: '/notifications', icon: Bell, roles: ['Administrator', 'Manager', 'Warehouse Staff', 'Sales Personnel'] },
+  { label: 'Inventory',          path: '/inventory',        icon: Boxes,         roles: ['Administrator', 'Manager', 'Warehouse Staff', 'Sales Personnel'] },
+  { label: 'Voice',              path: '/voice',            icon: Mic,           roles: ['Administrator', 'Manager', 'Warehouse Staff'] },
+  { label: 'Suppliers',          path: '/suppliers',        icon: Building2,     roles: ['Administrator', 'Manager'] },
+  { label: 'Purchase Orders',    path: '/purchase-orders',  icon: ClipboardList, roles: ['Administrator', 'Manager', 'Warehouse Staff'] },
+  { label: 'Sales & POS',        path: '/sales',            icon: ShoppingCart,  roles: ['Administrator', 'Manager', 'Sales Personnel'] },
+  { label: 'Forecast',           path: '/forecast',         icon: TrendingUp,    roles: ['Administrator', 'Manager'] },
+  { label: 'User Admin',         path: '/users',            icon: Users,         roles: ['Administrator'] },
+  { label: 'Notifications',      path: '/notifications',    icon: Bell,          roles: ['Administrator', 'Manager', 'Warehouse Staff', 'Sales Personnel'] },
 ];
+
+const ROLE_PILL: Record<string, string> = {
+  Administrator:    'pill-dark',
+  Manager:          'pill-indigo',
+  'Warehouse Staff':'pill-warning',
+  'Sales Personnel':'pill-success',
+};
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  if (!user) {
-    return <>{children}</>;
-  }
+  if (!user) return <>{children}</>;
 
   const allowedNav = NAV_ITEMS.filter((item) => item.roles.includes(user.role));
 
-  const roleBadgeColor = {
-    Administrator: 'bg-purple-950/60 text-purple-400 border-purple-800/60',
-    Manager: 'bg-blue-950/60 text-blue-400 border-blue-800/60',
-    'Warehouse Staff': 'bg-amber-950/60 text-amber-400 border-amber-800/60',
-    'Sales Personnel': 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60',
-  }[user.role];
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* Top Navbar */}
-      <header className="border-b border-slate-800 bg-slate-900/70 backdrop-blur sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center space-x-6">
-          <Link to="/" className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-bold text-slate-950 text-sm shadow">
-              IS
-            </div>
-            <span className="font-bold text-base tracking-wide text-white">ISMS</span>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-canvas)', display: 'flex', flexDirection: 'column' }}>
+
+      {/* ── Top Navigation Bar ── */}
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 40,
+        backgroundColor: 'var(--color-canvas)',
+        borderBottom: '1px solid var(--color-hairline)',
+        boxShadow: 'var(--shadow-1)',
+      }}>
+        <div style={{
+          maxWidth: 1280, margin: '0 auto',
+          padding: '0 24px',
+          height: 60,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 16,
+        }}>
+          {/* Logo */}
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', flexShrink: 0 }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: 10,
+              background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-soft) 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontWeight: 600, fontSize: 13, letterSpacing: '-0.3px',
+              boxShadow: '0 2px 8px rgba(83,58,253,0.35)',
+            }}>IS</div>
+            <span style={{ fontSize: 16, fontWeight: 400, color: 'var(--color-ink)', letterSpacing: '-0.2px' }}>ISMS</span>
           </Link>
 
-          {/* Navigation links */}
-          <nav className="hidden md:flex items-center space-x-1">
+          {/* Desktop Nav Links */}
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, overflowX: 'auto' }} className="hide-mobile">
             {allowedNav.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname.startsWith(item.path);
+              const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
               return (
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                    isActive
-                      ? 'bg-slate-800 text-emerald-400 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '6px 12px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontSize: 14, fontWeight: isActive ? 400 : 300,
+                    color: isActive ? 'var(--color-primary)' : 'var(--color-ink-mute)',
+                    backgroundColor: isActive ? 'rgba(83,58,253,0.08)' : 'transparent',
+                    textDecoration: 'none',
+                    transition: 'all 0.15s',
+                    whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-canvas-soft)'; (e.currentTarget as HTMLElement).style.color = 'var(--color-ink)'; }}
+                  onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--color-ink-mute)'; } }}
                 >
-                  <Icon className="w-3.5 h-3.5" />
+                  <Icon size={14} strokeWidth={isActive ? 2 : 1.5} />
                   <span>{item.label}</span>
                 </Link>
               );
             })}
           </nav>
-        </div>
 
-        {/* User profile & actions */}
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2.5">
-            <div className="text-right hidden sm:block">
-              <div className="text-xs font-medium text-slate-200">{user.name}</div>
-              <div className="text-[10px] text-slate-500">{user.email}</div>
+          {/* Right: user info + actions */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+            {/* Role + name */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }} className="hide-mobile">
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 13, fontWeight: 400, color: 'var(--color-ink)', lineHeight: 1.2 }}>{user.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--color-ink-mute)', lineHeight: 1.2 }}>{user.email}</div>
+              </div>
+              <span className={`pill-tag ${ROLE_PILL[user.role] || 'pill-neutral'}`} style={{ fontSize: 9 }}>
+                {user.role}
+              </span>
             </div>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${roleBadgeColor}`}>
-              {user.role}
-            </span>
+
+            {/* Help */}
+            <a
+              href="/README.md"
+              target="_blank"
+              rel="noreferrer"
+              title="Documentation"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 32, height: 32, borderRadius: 'var(--radius-pill)',
+                color: 'var(--color-ink-mute)', textDecoration: 'none',
+                border: '1px solid var(--color-hairline)',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--color-ink)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-canvas-soft)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--color-ink-mute)'; (e.currentTarget as HTMLElement).style.backgroundColor = ''; }}
+            >
+              <BookOpen size={14} />
+            </a>
+
+            {/* Sign out */}
+            <button
+              onClick={() => logout()}
+              title="Sign out"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '6px 14px',
+                borderRadius: 'var(--radius-pill)',
+                border: '1px solid var(--color-hairline)',
+                backgroundColor: 'transparent',
+                color: 'var(--color-ink-mute)',
+                fontSize: 13, fontWeight: 400,
+                cursor: 'pointer', transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = '#fca5a5'; el.style.color = '#b91c1c'; el.style.backgroundColor = '#fef2f2'; }}
+              onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = 'var(--color-hairline)'; el.style.color = 'var(--color-ink-mute)'; el.style.backgroundColor = 'transparent'; }}
+            >
+              <LogOut size={13} />
+              <span className="hide-mobile">Sign out</span>
+            </button>
+
+            {/* Mobile menu toggle */}
+            <button
+              className="show-mobile"
+              onClick={() => setMobileOpen(v => !v)}
+              style={{
+                display: 'none', alignItems: 'center', justifyContent: 'center',
+                width: 36, height: 36, borderRadius: 8,
+                border: '1px solid var(--color-hairline)',
+                backgroundColor: 'transparent', cursor: 'pointer',
+                color: 'var(--color-ink)',
+              }}
+            >
+              {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
           </div>
-
-          <a
-            href="https://github.com/topics/inventory-management-system"
-            target="_blank"
-            rel="noreferrer"
-            title="Contextual Help (UD-1)"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-          >
-            <HelpCircle className="w-4 h-4" />
-          </a>
-
-          <button
-            onClick={() => logout()}
-            title="Sign out"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
         </div>
+
+        {/* Mobile dropdown nav */}
+        {mobileOpen && (
+          <div style={{
+            borderTop: '1px solid var(--color-hairline)',
+            backgroundColor: 'var(--color-canvas)',
+            padding: '12px 16px 16px',
+            display: 'flex', flexDirection: 'column', gap: 2,
+          }}>
+            {allowedNav.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setMobileOpen(false)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    fontSize: 15, fontWeight: isActive ? 400 : 300,
+                    color: isActive ? 'var(--color-primary)' : 'var(--color-ink)',
+                    backgroundColor: isActive ? 'rgba(83,58,253,0.08)' : 'transparent',
+                    textDecoration: 'none',
+                  }}
+                >
+                  <Icon size={16} strokeWidth={isActive ? 2 : 1.5} />
+                  {item.label}
+                </Link>
+              );
+            })}
+            <hr className="divider" style={{ margin: '8px 0' }} />
+            <div style={{ fontSize: 13, color: 'var(--color-ink-mute)', padding: '4px 12px' }}>
+              {user.name} · {user.role}
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6">{children}</main>
+      {/* ── Main Content ── */}
+      <main style={{
+        flex: 1,
+        maxWidth: 1280, width: '100%', margin: '0 auto',
+        padding: '32px 24px',
+      }}>
+        {children}
+      </main>
+
+      {/* Responsive helpers */}
+      <style>{`
+        @media (max-width: 768px) {
+          .hide-mobile { display: none !important; }
+          .show-mobile { display: flex !important; }
+        }
+        @media (min-width: 769px) {
+          .show-mobile { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 }

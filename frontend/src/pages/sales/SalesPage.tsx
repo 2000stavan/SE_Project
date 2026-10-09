@@ -78,20 +78,21 @@ export default function SalesPage() {
     loadOrders();
   }, []);
 
+  // BUG FIX: /api/v1/products returns a plain array — was incorrectly unwrapping res?.data
   const loadProducts = async () => {
     try {
-      const res = await apiRequest<{ data: any[] }>('/api/v1/products');
-      if (res?.data) {
+      const res = await apiRequest<ProductItem[]>('/api/v1/products');
+      if (Array.isArray(res)) {
         setProducts(
-          res.data.map((p) => ({
-            sku_id: p.sku_id,
+          res.map((p: any) => ({
+            sku_id: p.skuId || p.sku_id,
             name: p.name,
-            unit_price: Number(p.unit_price || 0),
+            unit_price: Number(p.unitPrice || p.unit_price || 0),
           }))
         );
       }
     } catch {
-      // Products might be empty or restricted
+      // products list is non-critical — POS still works via manual entry
     }
   };
 
@@ -289,72 +290,44 @@ export default function SalesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800 pb-5">
+      <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'space-between', gap:12, borderBottom:'1px solid var(--color-hairline)', paddingBottom:20, marginBottom:24 }}>
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
-            <ShoppingCart className="w-6 h-6 text-emerald-400" />
-            Point of Sale & Sales Management
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Barcode POS scanner, stock deduction, PDF invoicing, returns, and marketplace webhook integration.
-          </p>
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
+            <ShoppingCart size={22} color="var(--color-primary)" strokeWidth={1.5} />
+            <span className="text-heading-lg" style={{ color:'var(--color-ink)' }}>Point of Sale & Sales Management</span>
+          </div>
+          <div style={{ fontSize:14, color:'var(--color-ink-mute)', fontWeight:300 }}>Barcode POS, stock deduction, PDF invoicing, returns & marketplace webhook (C3)</div>
         </div>
-
         {/* Tab switchers */}
-        <div className="flex bg-slate-900 border border-slate-800 rounded-lg p-1 text-xs font-medium">
-          <button
-            onClick={() => setActiveTab('pos')}
-            className={`px-3 py-1.5 rounded-md transition ${
-              activeTab === 'pos' ? 'bg-emerald-600 text-white font-semibold' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            POS Terminal
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('history');
-              loadOrders();
-            }}
-            className={`px-3 py-1.5 rounded-md transition ${
-              activeTab === 'history' ? 'bg-emerald-600 text-white font-semibold' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Order History
-          </button>
-          <button
-            onClick={() => setActiveTab('simulator')}
-            className={`px-3 py-1.5 rounded-md transition flex items-center gap-1.5 ${
-              activeTab === 'simulator' ? 'bg-emerald-600 text-white font-semibold' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5 text-amber-400" />
-            Marketplace Simulator
-          </button>
+        <div style={{ display:'flex', gap:4, backgroundColor:'var(--color-canvas-soft)', border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-pill)', padding:4 }}>
+          {([{key:'pos',label:'POS Terminal'},{key:'history',label:'Order History'},{key:'simulator',label:'⚡ Simulator'}] as const).map(t => (
+            <button key={t.key} onClick={() => { setActiveTab(t.key as any); if(t.key==='history') loadOrders(); }}
+              style={{ padding:'5px 14px', borderRadius:'var(--radius-pill)', fontSize:13, fontWeight: activeTab===t.key ? 400 : 300,
+                backgroundColor: activeTab===t.key ? 'var(--color-primary)' : 'transparent',
+                color: activeTab===t.key ? '#fff' : 'var(--color-ink-mute)',
+                border:'none', cursor:'pointer', transition:'all 0.15s' }}
+            >{t.label}</button>
+          ))}
         </div>
       </div>
 
       {/* Notifications */}
       {errorMsg && (
-        <div className="p-3 bg-rose-950/40 border border-rose-800/60 rounded-xl text-xs text-rose-300 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
-          <span>{errorMsg}</span>
+        <div className="banner-error" style={{ marginBottom:16 }}>
+          <AlertTriangle size={15} style={{ flexShrink:0 }} />
+          <span style={{ flex:1 }}>{errorMsg}</span>
+          <button onClick={() => setErrorMsg(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'inherit' }}>✕</button>
         </div>
       )}
       {successMsg && (
-        <div className="p-3 bg-emerald-950/40 border border-emerald-800/60 rounded-xl text-xs text-emerald-300 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            <span>{successMsg}</span>
-          </div>
+        <div className="banner-success" style={{ marginBottom:16 }}>
+          <CheckCircle2 size={15} style={{ flexShrink:0 }} />
+          <span style={{ flex:1 }}>{successMsg}</span>
           {lastInvoiceOrderId && (
-            <button
-              onClick={() => handleDownloadInvoice(lastInvoiceOrderId)}
-              className="flex items-center gap-1 text-[11px] bg-emerald-700 hover:bg-emerald-600 text-white px-2.5 py-1 rounded font-medium transition"
-            >
-              <FileText className="w-3.5 h-3.5" />
-              Download Invoice PDF
+            <button onClick={() => handleDownloadInvoice(lastInvoiceOrderId)} className="btn-primary-sm" style={{ fontSize:12 }}>
+              <FileText size={12} /> Invoice PDF
             </button>
           )}
         </div>
@@ -362,178 +335,106 @@ export default function SalesPage() {
 
       {/* TAB 1: POS TERMINAL */}
       {activeTab === 'pos' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left 2 Cols: Barcode Input & Cart */}
-          <div className="lg:col-span-2 space-y-4">
+        <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:20 }} className="lg-grid-2">
+          <style>{`.lg-grid-2 { } @media(min-width:1024px){.lg-grid-2{grid-template-columns:2fr 1fr;}}`}</style>
+          {/* Left: Barcode + Cart */}
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
             {/* Barcode scanner input */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
-              <form onSubmit={handleBarcodeAdd} className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    value={barcodeInput}
-                    onChange={(e) => setBarcodeInput(e.target.value)}
-                    placeholder="Scan barcode wedge or search product SKU / Name..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                    autoFocus
-                  />
+            <div style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', padding:16, boxShadow:'var(--shadow-1)' }}>
+              <form onSubmit={handleBarcodeAdd} style={{ display:'flex', gap:8 }}>
+                <div style={{ position:'relative', flex:1 }}>
+                  <Search size={14} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--color-ink-mute)' }} />
+                  <input type="text" value={barcodeInput} onChange={e => setBarcodeInput(e.target.value)}
+                    placeholder="Scan barcode or search product SKU / Name…"
+                    className="input" style={{ paddingLeft:32, fontSize:14, fontFamily:'monospace' }} autoFocus />
                 </div>
-                <button
-                  type="submit"
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add Item
-                </button>
+                <button type="submit" className="btn-primary-sm"><Plus size={13} />Add</button>
               </form>
-
-              {/* Quick Suggestions from existing catalog */}
               {products.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2 pt-2 border-t border-slate-800/60">
-                  <span className="text-[10px] text-slate-500 self-center">Quick Add:</span>
-                  {products.slice(0, 5).map((p) => (
-                    <button
-                      key={p.sku_id}
-                      type="button"
-                      onClick={() => addToCart(p.sku_id, p.name, p.unit_price)}
-                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] px-2.5 py-1 rounded-md border border-slate-700/60 transition"
-                    >
-                      {p.name} (${p.unit_price.toFixed(2)})
+                <div style={{ marginTop:12, paddingTop:12, borderTop:'1px solid var(--color-hairline)', display:'flex', flexWrap:'wrap', alignItems:'center', gap:6 }}>
+                  <span style={{ fontSize:10, color:'var(--color-ink-mute)', textTransform:'uppercase', letterSpacing:'0.1px' }}>Quick Add:</span>
+                  {products.slice(0, 6).map(p => (
+                    <button key={p.sku_id} type="button" onClick={() => addToCart(p.sku_id, p.name, p.unit_price)}
+                      className="btn-ghost-sm" style={{ fontSize:12 }}>
+                      {p.name} <span className="tnum">₹{p.unit_price.toFixed(2)}</span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
-
             {/* Cart Table */}
-            <div className="bg-slate-900/40 border border-slate-800 rounded-xl overflow-hidden">
-              <div className="p-3 border-b border-slate-800 bg-slate-900/80 font-semibold text-xs text-slate-200">
+            <div style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', overflow:'hidden', boxShadow:'var(--shadow-1)' }}>
+              <div style={{ padding:'10px 16px', borderBottom:'1px solid var(--color-hairline)', backgroundColor:'var(--color-canvas-soft)', fontSize:13, fontWeight:400, color:'var(--color-ink)' }}>
                 Cart Items ({cart.length})
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950/50 text-slate-400 uppercase text-[10px] border-b border-slate-800">
-                    <tr>
-                      <th className="py-2.5 px-4">Item / SKU</th>
-                      <th className="py-2.5 px-4">Price</th>
-                      <th className="py-2.5 px-4 text-center">Quantity</th>
-                      <th className="py-2.5 px-4 text-right">Subtotal</th>
-                      <th className="py-2.5 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+              <div style={{ overflowX:'auto' }}>
+                <table className="data-table">
+                  <thead><tr>
+                    <th>Item / SKU</th><th>Unit Price</th><th style={{textAlign:'center'}}>Qty</th><th style={{textAlign:'right'}}>Subtotal</th><th style={{textAlign:'right'}}>Remove</th>
+                  </tr></thead>
+                  <tbody>
                     {cart.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="py-8 text-center text-slate-500 text-xs">
-                          Cart is empty. Scan barcode wedge or select products above.
+                      <tr><td colSpan={5} style={{ textAlign:'center', color:'var(--color-ink-mute)', padding:40 }}>
+                        Cart is empty. Scan a barcode wedge or use Quick Add above.
+                      </td></tr>
+                    ) : cart.map(line => (
+                      <tr key={line.sku_id}>
+                        <td>
+                          <div style={{ fontWeight:400, color:'var(--color-ink)', fontSize:14 }}>{line.name}</div>
+                          <div style={{ fontSize:11, fontFamily:'monospace', color:'var(--color-primary)' }}>{line.sku_id}</div>
+                        </td>
+                        <td><span className="tnum" style={{ color:'var(--color-ink)' }}>₹{line.unit_price.toFixed(2)}</span></td>
+                        <td style={{ textAlign:'center' }}>
+                          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                            <button type="button" onClick={() => updateQuantity(line.sku_id, line.quantity-1)}
+                              style={{ width:24, height:24, borderRadius:6, border:'1px solid var(--color-hairline)', backgroundColor:'var(--color-canvas-soft)', cursor:'pointer', fontSize:14, fontWeight:400, display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
+                            <span className="tnum" style={{ width:28, textAlign:'center', fontWeight:400, color:'var(--color-ink)', fontSize:14 }}>{line.quantity}</span>
+                            <button type="button" onClick={() => updateQuantity(line.sku_id, line.quantity+1)}
+                              style={{ width:24, height:24, borderRadius:6, border:'1px solid var(--color-hairline)', backgroundColor:'var(--color-canvas-soft)', cursor:'pointer', fontSize:14, fontWeight:400, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
+                          </div>
+                        </td>
+                        <td style={{ textAlign:'right' }}><span className="tnum" style={{ fontWeight:400, color:'var(--color-ink)', fontSize:14 }}>₹{(line.quantity*line.unit_price).toFixed(2)}</span></td>
+                        <td style={{ textAlign:'right' }}>
+                          <button type="button" onClick={() => removeFromCart(line.sku_id)} className="btn-ghost-sm" style={{ color:'#b91c1c', borderColor:'#fca5a5' }}><Trash2 size={12} /></button>
                         </td>
                       </tr>
-                    ) : (
-                      cart.map((line) => (
-                        <tr key={line.sku_id} className="hover:bg-slate-800/30">
-                          <td className="py-3 px-4">
-                            <div className="font-medium text-white">{line.name}</div>
-                            <div className="text-[10px] font-mono text-emerald-400">{line.sku_id}</div>
-                          </td>
-                          <td className="py-3 px-4 font-mono text-slate-300">
-                            ${line.unit_price.toFixed(2)}
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => updateQuantity(line.sku_id, line.quantity - 1)}
-                                className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs font-bold"
-                              >
-                                -
-                              </button>
-                              <span className="w-8 text-center font-mono font-bold text-white">
-                                {line.quantity}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => updateQuantity(line.sku_id, line.quantity + 1)}
-                                className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs font-bold"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-right font-mono font-bold text-white">
-                            ${(line.quantity * line.unit_price).toFixed(2)}
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <button
-                              type="button"
-                              onClick={() => removeFromCart(line.sku_id)}
-                              className="text-slate-500 hover:text-rose-400 p-1 rounded transition"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
-
-          {/* Right Col: Payment & Checkout Summary */}
-          <div className="space-y-4">
-            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-5">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-emerald-400" />
-                Checkout & Payment
-              </h3>
-
+          {/* Right: Checkout panel */}
+          <div>
+            <div style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', padding:20, boxShadow:'var(--shadow-1)', display:'flex', flexDirection:'column', gap:16 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <DollarSign size={16} color="var(--color-primary)" strokeWidth={1.5} />
+                <span style={{ fontSize:16, fontWeight:400, color:'var(--color-ink)' }}>Checkout & Payment</span>
+              </div>
               <div>
-                <label className="block text-[11px] text-slate-400 font-medium mb-1.5">
-                  Payment Method
-                </label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                >
+                <label style={{ display:'block', fontSize:12, color:'var(--color-ink-mute)', marginBottom:6 }}>Payment Method</label>
+                <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="input" style={{ fontSize:14 }}>
                   <option value="Credit Card">Credit Card</option>
                   <option value="Cash">Cash</option>
                   <option value="UPI">UPI / Digital QR</option>
                   <option value="Bank Transfer">Bank Transfer</option>
                 </select>
               </div>
-
-              <div className="space-y-2 pt-3 border-t border-slate-800/80 text-xs">
-                <div className="flex justify-between text-slate-400">
-                  <span>Lines count</span>
-                  <span>{cart.length}</span>
-                </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>Total quantity</span>
-                  <span>{cart.reduce((s, i) => s + i.quantity, 0)} units</span>
-                </div>
-                <div className="flex justify-between text-sm font-bold text-white pt-2 border-t border-slate-800">
-                  <span>Total Due</span>
-                  <span className="text-emerald-400 font-mono text-base">
-                    ${cartTotal.toFixed(2)}
-                  </span>
+              <hr className="divider" />
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--color-ink-mute)' }}><span>Lines</span><span className="tnum">{cart.length}</span></div>
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--color-ink-mute)' }}><span>Units</span><span className="tnum">{cart.reduce((s,i)=>s+i.quantity,0)}</span></div>
+                <hr className="divider" />
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+                  <span style={{ fontSize:15, fontWeight:400, color:'var(--color-ink)' }}>Total Due</span>
+                  <span className="tnum" style={{ fontSize:22, fontWeight:400, color:'var(--color-primary)' }}>₹{cartTotal.toFixed(2)}</span>
                 </div>
               </div>
-
-              <button
-                type="button"
-                disabled={cart.length === 0 || isSubmitting}
-                onClick={handleCompleteSale}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold py-3 rounded-lg text-xs tracking-wide uppercase transition shadow-lg shadow-emerald-950/50"
-              >
-                {isSubmitting ? 'Processing & Locking Stock...' : 'Complete Physical Sale'}
+              <button type="button" disabled={cart.length===0||isSubmitting} onClick={handleCompleteSale}
+                className="btn-primary" style={{ width:'100%', justifyContent:'center', opacity: cart.length===0||isSubmitting ? 0.5 : 1 }}>
+                {isSubmitting ? 'Processing…' : 'Complete Physical Sale'}
               </button>
-
-              <p className="text-[10px] text-slate-500 text-center">
-                Completing sale logs transaction, locks & deducts inventory row, and generates PDF invoice.
-              </p>
+              <div style={{ fontSize:11, color:'var(--color-ink-mute)', textAlign:'center' }}>Completes sale, locks stock, and generates PDF invoice</div>
             </div>
           </div>
         </div>
@@ -541,103 +442,49 @@ export default function SalesPage() {
 
       {/* TAB 2: ORDER HISTORY */}
       {activeTab === 'history' && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-sm font-bold text-white">All Sales Orders</h2>
-            <button
-              onClick={loadOrders}
-              disabled={loadingOrders}
-              className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 transition"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loadingOrders ? 'animate-spin' : ''}`} />
+        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span style={{ fontSize:16, fontWeight:400, color:'var(--color-ink)' }}>All Sales Orders</span>
+            <button onClick={loadOrders} disabled={loadingOrders} className="btn-ghost-sm">
+              <RefreshCw size={13} style={{ animation: loadingOrders ? 'spin 1s linear infinite' : 'none' }} />
               Refresh
             </button>
           </div>
-
-          <div className="bg-slate-900/40 border border-slate-800 rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950/60 text-slate-400 uppercase text-[10px] border-b border-slate-800">
-                  <tr>
-                    <th className="py-3 px-4">Order ID</th>
-                    <th className="py-3 px-4">Channel</th>
-                    <th className="py-3 px-4">Date</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4">Payment</th>
-                    <th className="py-3 px-4 text-right">Total Amount</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
+          <div style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', overflow:'hidden', boxShadow:'var(--shadow-1)' }}>
+            <div style={{ overflowX:'auto' }}>
+              <table className="data-table">
+                <thead><tr>
+                  <th>Order ID</th><th>Channel</th><th>Date</th><th>Status</th><th>Payment</th>
+                  <th style={{textAlign:'right'}}>Total</th><th style={{textAlign:'right'}}>Actions</th>
+                </tr></thead>
+                <tbody>
                   {orders.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-8 text-center text-slate-500 text-xs">
-                        No sales orders found. Complete a sale or simulate an order.
-                      </td>
-                    </tr>
-                  ) : (
-                    orders.map((order) => {
-                      const isCompleted = order.status === 'Completed' || order.status === 'Paid';
-                      const isReturned = order.status === 'Returned';
-
-                      return (
-                        <tr key={order.order_id} className="hover:bg-slate-800/30">
-                          <td className="py-3 px-4 font-mono font-medium text-emerald-400">
-                            {order.order_id}
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700/60">
-                              {order.channel}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-slate-400">
-                            {new Date(order.order_date).toLocaleString()}
-                          </td>
-                          <td className="py-3 px-4">
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                                isCompleted
-                                  ? 'bg-emerald-950/50 text-emerald-400 border-emerald-800/50'
-                                  : isReturned
-                                  ? 'bg-amber-950/50 text-amber-400 border-amber-800/50'
-                                  : 'bg-rose-950/50 text-rose-400 border-rose-800/50'
-                              }`}
-                            >
-                              {order.status}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-slate-300">
-                            {order.payment_method || 'N/A'}
-                          </td>
-                          <td className="py-3 px-4 text-right font-mono font-bold text-white">
-                            ${Number(order.total_amount).toFixed(2)}
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleDownloadInvoice(order.order_id)}
-                                title="Download Invoice PDF"
-                                className="text-slate-400 hover:text-emerald-400 p-1.5 rounded bg-slate-800/60 hover:bg-slate-800 transition"
-                              >
-                                <FileText className="w-3.5 h-3.5" />
-                              </button>
-                              {isCompleted && !isReturned && (
-                                <button
-                                  type="button"
-                                  onClick={() => openReturnModal(order)}
-                                  title="Process Return"
-                                  className="text-slate-400 hover:text-amber-400 p-1.5 rounded bg-slate-800/60 hover:bg-slate-800 transition"
-                                >
-                                  <RotateCcw className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
+                    <tr><td colSpan={7} style={{ textAlign:'center', color:'var(--color-ink-mute)', padding:40 }}>
+                      No sales orders yet. Complete a POS sale or simulate a marketplace order.
+                    </td></tr>
+                  ) : orders.map(order => {
+                    const isCompleted = order.status === 'Completed' || order.status === 'Paid';
+                    const isReturned = order.status === 'Returned';
+                    const statusClass = isReturned ? 'pill-warning' : isCompleted ? 'pill-success' : 'pill-neutral';
+                    return (
+                      <tr key={order.order_id}>
+                        <td><span className="tnum" style={{ fontFamily:'monospace', color:'var(--color-primary)', fontWeight:400 }}>{order.order_id}</span></td>
+                        <td><span className="pill-tag pill-neutral" style={{fontSize:9}}>{order.channel}</span></td>
+                        <td><span className="tnum" style={{ fontSize:13, color:'var(--color-ink-mute)' }}>{new Date(order.order_date).toLocaleString()}</span></td>
+                        <td><span className={`pill-tag ${statusClass}`} style={{fontSize:9}}>{order.status}</span></td>
+                        <td style={{ fontSize:13, color:'var(--color-ink-secondary)' }}>{order.payment_method||'N/A'}</td>
+                        <td style={{ textAlign:'right' }}><span className="tnum" style={{ fontWeight:400, color:'var(--color-ink)', fontSize:14 }}>₹{Number(order.total_amount).toFixed(2)}</span></td>
+                        <td style={{ textAlign:'right' }}>
+                          <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:4 }}>
+                            <button type="button" onClick={() => handleDownloadInvoice(order.order_id)} className="btn-ghost-sm" style={{fontSize:12}} title="Invoice"><FileText size={12} /></button>
+                            {isCompleted && !isReturned && (
+                              <button type="button" onClick={() => openReturnModal(order)} className="btn-ghost-sm" style={{fontSize:12}} title="Return"><RotateCcw size={12} /></button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -647,115 +494,57 @@ export default function SalesPage() {
 
       {/* TAB 3: MARKETPLACE SIMULATOR */}
       {activeTab === 'simulator' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Zap className="w-4 h-4 text-amber-400" />
-              Marketplace Webhook HMAC Simulator
-            </h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Test end-to-end inbound marketplace orders. The system signs payload payloads using
-              HMAC-SHA256 (<span className="font-mono text-emerald-400">X-Signature</span> header),
-              deducts stock immediately, and creates the order idempotently.
-            </p>
-
-            <form onSubmit={handleSimulateWebhook} className="space-y-4 pt-2">
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }} className="sim-grid">
+          <style>{`@media(max-width:768px){.sim-grid{grid-template-columns:1fr!important;}}`}</style>
+          <div style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', padding:20, boxShadow:'var(--shadow-1)', display:'flex', flexDirection:'column', gap:16 }}>
+            <div>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                <Zap size={16} color="#9b6829" strokeWidth={1.5} />
+                <span style={{ fontSize:16, fontWeight:400, color:'var(--color-ink)' }}>Marketplace HMAC Simulator</span>
+              </div>
+              <div style={{ fontSize:13, color:'var(--color-ink-mute)', fontWeight:300 }}>Simulates inbound marketplace orders signed with <code style={{fontSize:11,color:'var(--color-primary)'}}>HMAC-SHA256</code> via <code style={{fontSize:11,color:'var(--color-primary)'}}>X-Signature</code>. Deducts stock idempotently.</div>
+            </div>
+            <form onSubmit={handleSimulateWebhook} style={{ display:'flex', flexDirection:'column', gap:14 }}>
               <div>
-                <label className="block text-[11px] text-slate-400 font-medium mb-1">
-                  Marketplace Channel
-                </label>
-                <select
-                  value={simMarketplace}
-                  onChange={(e) => setSimMarketplace(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                >
+                <label style={{ display:'block', fontSize:12, color:'var(--color-ink-mute)', marginBottom:5 }}>Marketplace Channel</label>
+                <select value={simMarketplace} onChange={e => setSimMarketplace(e.target.value)} className="input" style={{fontSize:14}}>
                   <option value="amazon">Amazon (POST /webhook/amazon)</option>
                   <option value="shopify">Shopify (POST /webhook/shopify)</option>
                   <option value="flipkart">Flipkart (POST /webhook/flipkart)</option>
                 </select>
               </div>
-
               <div>
-                <label className="block text-[11px] text-slate-400 font-medium mb-1">
-                  Target Product SKU
-                </label>
-                <input
-                  type="text"
-                  value={simSku}
-                  onChange={(e) => setSimSku(e.target.value)}
-                  placeholder="e.g. SKU-1001 or select from catalog"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                  required
-                />
+                <label style={{ display:'block', fontSize:12, color:'var(--color-ink-mute)', marginBottom:5 }}>Target Product SKU</label>
+                <input type="text" value={simSku} onChange={e => setSimSku(e.target.value)} placeholder="e.g. SKU-1001" className="input" style={{fontSize:14, fontFamily:'monospace'}} required />
                 {products.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {products.slice(0, 4).map((p) => (
-                      <button
-                        key={p.sku_id}
-                        type="button"
-                        onClick={() => {
-                          setSimSku(p.sku_id);
-                          setSimPrice(p.unit_price);
-                        }}
-                        className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300 hover:text-white"
-                      >
-                        {p.sku_id}
-                      </button>
+                  <div style={{ marginTop:8, display:'flex', flexWrap:'wrap', gap:4 }}>
+                    {products.slice(0,4).map(p => (
+                      <button key={p.sku_id} type="button" onClick={() => {setSimSku(p.sku_id);setSimPrice(p.unit_price);}} className="btn-ghost-sm" style={{fontSize:11}}>{p.sku_id}</button>
                     ))}
                   </div>
                 )}
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-medium mb-1">
-                    Quantity
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={simQty}
-                    onChange={(e) => setSimQty(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                    required
-                  />
+                  <label style={{ display:'block', fontSize:12, color:'var(--color-ink-mute)', marginBottom:5 }}>Quantity</label>
+                  <input type="number" min={1} value={simQty} onChange={e => setSimQty(Number(e.target.value))} className="input" style={{fontSize:14}} required />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-medium mb-1">
-                    Price ($)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min={0.01}
-                    value={simPrice}
-                    onChange={(e) => setSimPrice(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                    required
-                  />
+                  <label style={{ display:'block', fontSize:12, color:'var(--color-ink-mute)', marginBottom:5 }}>Price (₹)</label>
+                  <input type="number" step="0.01" min={0.01} value={simPrice} onChange={e => setSimPrice(Number(e.target.value))} className="input" style={{fontSize:14}} required />
                 </div>
               </div>
-
-              <button
-                type="submit"
-                disabled={simLoading || !simSku.trim()}
-                className="w-full bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 text-white font-semibold py-2.5 rounded-lg text-xs tracking-wide transition flex items-center justify-center gap-2"
-              >
-                {simLoading ? 'Simulating HMAC Webhook...' : 'Fire HMAC-Signed Webhook'}
+              <button type="submit" disabled={simLoading||!simSku.trim()} className="btn-primary" style={{justifyContent:'center'}}>
+                {simLoading ? 'Simulating…' : '⚡ Fire HMAC-Signed Webhook'}
               </button>
             </form>
           </div>
-
-          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-3">
-            <h3 className="text-sm font-bold text-white">Webhook Response & Signature Payload</h3>
+          <div style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', padding:20, boxShadow:'var(--shadow-1)', display:'flex', flexDirection:'column', gap:12 }}>
+            <div style={{ fontSize:15, fontWeight:400, color:'var(--color-ink)' }}>Webhook Response & HMAC Payload</div>
             {simResult ? (
-              <pre className="p-3 bg-slate-950 border border-slate-800 rounded-lg text-[11px] font-mono text-emerald-300 overflow-x-auto max-h-[360px]">
-                {JSON.stringify(simResult, null, 2)}
-              </pre>
+              <pre style={{ padding:12, backgroundColor:'var(--color-brand-dark-900)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:8, fontSize:11, fontFamily:'monospace', color:'#a5f3fc', overflowX:'auto', maxHeight:360, flex:1 }}>{JSON.stringify(simResult, null, 2)}</pre>
             ) : (
-              <div className="h-64 flex items-center justify-center border border-dashed border-slate-800 rounded-lg text-xs text-slate-500">
-                Trigger a simulation to inspect the HMAC response payload
-              </div>
+              <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', border:'1px dashed var(--color-hairline)', borderRadius:8, fontSize:13, color:'var(--color-ink-mute)', minHeight:200 }}>Fire a simulation to inspect the signed response payload</div>
             )}
           </div>
         </div>
@@ -763,90 +552,49 @@ export default function SalesPage() {
 
       {/* Return Order Modal */}
       {returnModalOrder && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <RotateCcw className="w-4 h-4 text-amber-400" />
-                Process Order Return ({returnModalOrder.order_id})
-              </h3>
-              <button
-                type="button"
-                onClick={() => setReturnModalOrder(null)}
-                className="text-slate-500 hover:text-white text-xs"
-              >
-                Cancel
-              </button>
+        <div className="modal-overlay">
+          <div className="modal-box modal-box-lg">
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+              <div>
+                <div className="text-heading-sm" style={{ color:'var(--color-ink)' }}>Process Order Return</div>
+                <div style={{ fontSize:13, color:'var(--color-ink-mute)', marginTop:2 }}>{returnModalOrder.order_id}</div>
+              </div>
+              <button type="button" onClick={() => setReturnModalOrder(null)} className="btn-ghost-sm" style={{padding:'4px 8px'}}>✕</button>
             </div>
-
+            <hr className="divider" style={{marginBottom:16}} />
+            <div style={{marginBottom:14}}>
+              <label style={{display:'block',fontSize:12,color:'var(--color-ink-mute)',marginBottom:5}}>Return Reason</label>
+              <input type="text" value={returnReason} onChange={e => setReturnReason(e.target.value)} className="input" style={{fontSize:14}} required />
+            </div>
             <div>
-              <label className="block text-[11px] text-slate-400 font-medium mb-1">
-                Return Reason
-              </label>
-              <input
-                type="text"
-                value={returnReason}
-                onChange={(e) => setReturnReason(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-[11px] text-slate-400 font-medium">
-                Select Quantities to Restock:
-              </label>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {returnModalOrder.lines.map((line) => (
-                  <div
-                    key={line.sku_id}
-                    className="flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800 text-xs"
-                  >
+              <div style={{fontSize:12,color:'var(--color-ink-mute)',marginBottom:8}}>Select Quantities to Restock</div>
+              <div style={{ border:'1px solid var(--color-hairline)', borderRadius:8, overflow:'hidden', maxHeight:220, overflowY:'auto' }}>
+                {returnModalOrder.lines.map(line => (
+                  <div key={line.sku_id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', borderBottom:'1px solid var(--color-hairline)' }}>
                     <div>
-                      <span className="font-mono text-emerald-400 font-bold">{line.sku_id}</span>
-                      <span className="text-slate-400 ml-2">(Max: {line.quantity})</span>
+                      <span style={{fontFamily:'monospace',fontSize:13,color:'var(--color-primary)',fontWeight:400}}>{line.sku_id}</span>
+                      <span style={{fontSize:12,color:'var(--color-ink-mute)',marginLeft:8}}>(Max: {line.quantity})</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-[10px] text-slate-400">Qty:</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={line.quantity}
-                        value={returnQuantities[line.sku_id] ?? line.quantity}
-                        onChange={(e) =>
-                          setReturnQuantities({
-                            ...returnQuantities,
-                            [line.sku_id]: Number(e.target.value),
-                          })
-                        }
-                        className="w-16 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-center font-mono text-white text-xs"
-                      />
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <label style={{fontSize:11,color:'var(--color-ink-mute)'}}>Qty:</label>
+                      <input type="number" min={0} max={line.quantity} value={returnQuantities[line.sku_id]??line.quantity}
+                        onChange={e => setReturnQuantities({...returnQuantities,[line.sku_id]:Number(e.target.value)})}
+                        className="input" style={{width:72,fontSize:14,textAlign:'center'}} />
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => setReturnModalOrder(null)}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs hover:bg-slate-700"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isReturning}
-                onClick={handleProcessReturn}
-                className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs disabled:bg-slate-800"
-              >
-                {isReturning ? 'Processing Return...' : 'Confirm Return & Restock'}
+            <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:20}}>
+              <button type="button" onClick={() => setReturnModalOrder(null)} className="btn-ghost-sm">Cancel</button>
+              <button type="button" disabled={isReturning} onClick={handleProcessReturn} className="btn-primary-sm">
+                {isReturning ? 'Processing…' : 'Confirm Return & Restock'}
               </button>
             </div>
           </div>
         </div>
       )}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

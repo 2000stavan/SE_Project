@@ -1,15 +1,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { apiRequest } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import {
-  Boxes,
-  Search,
-  Plus,
-  RefreshCw,
-  AlertTriangle,
-  Radio,
-  X,
-} from 'lucide-react';
+import { Boxes, Search, Plus, RefreshCw, AlertTriangle, Radio, X } from 'lucide-react';
 
 interface Product {
   skuId: string;
@@ -21,14 +13,17 @@ interface Product {
 }
 
 interface StockRecord {
-  id: {
-    skuId: string;
-    locationId: string;
-  };
+  id: { skuId: string; locationId: string };
   quantityOnHand: number;
   quantityReserved: number;
   lastUpdated: string;
 }
+
+const pageHeaderStyle: React.CSSProperties = {
+  display: 'flex', flexWrap: 'wrap', alignItems: 'center',
+  justifyContent: 'space-between', gap: 12,
+  borderBottom: '1px solid var(--color-hairline)', paddingBottom: 20, marginBottom: 24,
+};
 
 export default function InventoryPage() {
   const { user } = useAuth();
@@ -39,13 +34,11 @@ export default function InventoryPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
 
-  // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAdjustModal, setShowAdjustModal] = useState<StockRecord | null>(null);
   const [adjustDelta, setAdjustDelta] = useState<number>(0);
   const [adjustError, setAdjustError] = useState<string | null>(null);
 
-  // New product form
   const [newSku, setNewSku] = useState('');
   const [newName, setNewName] = useState('');
   const [newCategory, setNewCategory] = useState('');
@@ -62,28 +55,22 @@ export default function InventoryPage() {
       const q = searchTerm ? `q=${encodeURIComponent(searchTerm)}` : '';
       const cat = categoryFilter ? `category=${encodeURIComponent(categoryFilter)}` : '';
       const params = [q, cat].filter(Boolean).join('&');
-
       const prodRes = await apiRequest<Product[]>(`/api/v1/products${params ? '?' + params : ''}`);
       const stockRes = await apiRequest<StockRecord[]>('/api/v1/stock');
       setProducts(prodRes);
       setStocks(stockRes);
-    } catch {
-      // ignore
-    } finally {
+    } catch { /* ignore */ } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [categoryFilter]);
+  useEffect(() => { fetchData(); }, [categoryFilter]);
 
-  // Connect WebSocket for live stock sync (C1.5 / PE-2)
+  // WebSocket live sync
   useEffect(() => {
     const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${wsProto}//${window.location.host}/ws/stock`;
     let socket: WebSocket | null = null;
-
     try {
       socket = new WebSocket(wsUrl);
       socket.onopen = () => setWsConnected(true);
@@ -93,42 +80,19 @@ export default function InventoryPage() {
           const data = JSON.parse(event.data);
           if (data.type === 'STOCK_UPDATE') {
             setStocks((prev) => {
-              const existingIdx = prev.findIndex(
-                (s) => s.id.skuId === data.skuId && s.id.locationId === data.locationId
-              );
-              if (existingIdx >= 0) {
+              const idx = prev.findIndex(s => s.id.skuId === data.skuId && s.id.locationId === data.locationId);
+              if (idx >= 0) {
                 const next = [...prev];
-                next[existingIdx] = {
-                  ...next[existingIdx],
-                  quantityOnHand: data.quantityOnHand,
-                  quantityReserved: data.quantityReserved,
-                  lastUpdated: new Date().toISOString(),
-                };
+                next[idx] = { ...next[idx], quantityOnHand: data.quantityOnHand, lastUpdated: new Date().toISOString() };
                 return next;
-              } else {
-                return [
-                  ...prev,
-                  {
-                    id: { skuId: data.skuId, locationId: data.locationId },
-                    quantityOnHand: data.quantityOnHand,
-                    quantityReserved: data.quantityReserved,
-                    lastUpdated: new Date().toISOString(),
-                  },
-                ];
               }
+              return prev;
             });
           }
-        } catch {
-          // ignore
-        }
+        } catch { /* ignore */ }
       };
-    } catch {
-      setWsConnected(false);
-    }
-
-    return () => {
-      if (socket) socket.close();
-    };
+    } catch { /* ignore */ }
+    return () => { if (socket) socket.close(); };
   }, []);
 
   const handleCreateProduct = async (e: FormEvent) => {
@@ -137,209 +101,165 @@ export default function InventoryPage() {
     try {
       await apiRequest('/api/v1/products', {
         method: 'POST',
-        body: JSON.stringify({
-          sku_id: newSku.trim(),
-          name: newName.trim(),
-          category: newCategory.trim(),
-          unit_price: Number(newPrice),
-          reorder_point: Number(newReorderPoint),
-          unit_of_measure: newUom.trim(),
-        }),
+        body: JSON.stringify({ skuId: newSku, name: newName, category: newCategory, unitPrice: newPrice, reorderPoint: newReorderPoint, unitOfMeasure: newUom }),
       });
       setShowCreateModal(false);
-      setNewSku('');
-      setNewName('');
-      setNewCategory('');
+      setNewSku(''); setNewName(''); setNewCategory(''); setNewPrice(10); setNewReorderPoint(5); setNewUom('PCS');
       fetchData();
-    } catch (err: unknown) {
+    } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to create product');
     }
   };
 
-  const handleAdjustStock = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleAdjustStock = async () => {
     if (!showAdjustModal) return;
     setAdjustError(null);
     try {
-      await apiRequest('/api/v1/stock/adjust', {
-        method: 'POST',
-        body: JSON.stringify({
-          sku: showAdjustModal.id.skuId,
-          location: showAdjustModal.id.locationId,
-          delta: Number(adjustDelta),
-          reason: 'Manual adjustment from UI',
-        }),
+      const current = showAdjustModal.quantityOnHand;
+      await apiRequest(`/api/v1/stock/${showAdjustModal.id.skuId}/${showAdjustModal.id.locationId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ quantity: current + adjustDelta, reason: 'Manual adjustment' }),
       });
       setShowAdjustModal(null);
       setAdjustDelta(0);
       fetchData();
-    } catch (err: unknown) {
+    } catch (err) {
       setAdjustError(err instanceof Error ? err.message : 'Adjustment failed');
     }
   };
 
-  const getStockForSku = (skuId: string) => {
-    return stocks.filter((s) => s.id.skuId === skuId);
+  const getStockForProduct = (skuId: string) =>
+    stocks.filter(s => s.id.skuId === skuId).reduce((sum, s) => sum + s.quantityOnHand, 0);
+
+  const getLowStockStyle = (skuId: string, reorderPoint: number) => {
+    const qty = getStockForProduct(skuId);
+    if (qty === 0)    return 'pill-error';
+    if (qty <= reorderPoint) return 'pill-warning';
+    return 'pill-success';
   };
 
+  const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
+
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      {/* Header */}
+      <div style={pageHeaderStyle}>
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center space-x-2">
-            <Boxes className="w-6 h-6 text-emerald-400" />
-            <span>Inventory Management</span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Real-time stock tracking with pessimistic row locking and low-stock alerts
-          </p>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px]">
-            <Radio className={`w-3 h-3 ${wsConnected ? 'text-emerald-400 animate-pulse' : 'text-slate-500'}`} />
-            <span className={wsConnected ? 'text-slate-300' : 'text-slate-500'}>
-              {wsConnected ? 'WebSocket Live (<5s sync)' : 'Sync Standby'}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <Boxes size={22} color="var(--color-primary)" strokeWidth={1.5} />
+            <span className="text-heading-lg" style={{ color: 'var(--color-ink)' }}>Inventory Management</span>
           </div>
-
-          <button
-            onClick={fetchData}
-            className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 transition"
-            title="Refresh inventory"
+          <div style={{ fontSize: 14, color: 'var(--color-ink-mute)', fontWeight: 300 }}>
+            Products & stock levels · row-lock updates · real-time sync (C1)
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span
+            className={`pill-tag ${wsConnected ? 'pill-success' : 'pill-neutral'}`}
+            style={{ display: 'flex', alignItems: 'center', gap: 4 }}
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <Radio size={10} />
+            {wsConnected ? 'Live' : 'Connecting…'}
+          </span>
+          <button onClick={fetchData} className="btn-ghost-sm" disabled={isLoading}>
+            <RefreshCw size={13} style={{ animation: isLoading ? 'spin 1s linear infinite' : 'none' }} />
+            Refresh
           </button>
-
           {canEdit && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center space-x-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Product</span>
+            <button onClick={() => setShowCreateModal(true)} className="btn-primary-sm">
+              <Plus size={13} />
+              New Product
             </button>
           )}
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="relative sm:col-span-2">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+      {/* Filters */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+        <div style={{ position: 'relative', flex: '1 1 260px' }}>
+          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-ink-mute)' }} />
           <input
+            className="input"
+            style={{ paddingLeft: 32, fontSize: 14 }}
             type="text"
+            placeholder="Search products…"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && fetchData()}
-            placeholder="Search by SKU or Product Name..."
-            className="w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            onChange={e => setSearchTerm(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && fetchData()}
           />
         </div>
-
-        <div>
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500"
-          >
-            <option value="">All Categories</option>
-            <option value="Electronics">Electronics</option>
-            <option value="Hardware">Hardware</option>
-            <option value="Packaging">Packaging</option>
-            <option value="Grocery">Grocery</option>
-          </select>
-        </div>
+        <select
+          className="input"
+          style={{ flex: '0 1 180px', fontSize: 14 }}
+          value={categoryFilter}
+          onChange={e => setCategoryFilter(e.target.value)}
+        >
+          <option value="">All Categories</option>
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <button onClick={fetchData} className="btn-ghost-sm">
+          <Search size={13} /> Search
+        </button>
       </div>
 
-      {/* Product List Table */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950/70 border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
+      {/* Table */}
+      <div style={{ border: '1px solid var(--color-hairline)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-1)' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="data-table">
+            <thead>
               <tr>
-                <th className="py-3 px-4">SKU / Name</th>
-                <th className="py-3 px-4">Category</th>
-                <th className="py-3 px-4">Price</th>
-                <th className="py-3 px-4">Stock by Location</th>
-                <th className="py-3 px-4">Reorder Point</th>
-                <th className="py-3 px-4">Status</th>
-                {canEdit && <th className="py-3 px-4 text-right">Action</th>}
+                <th>SKU / Product</th>
+                <th>Category</th>
+                <th>Unit Price</th>
+                <th>Stock on Hand</th>
+                <th>Status</th>
+                {canEdit && <th style={{ textAlign: 'right' }}>Actions</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-slate-200">
-              {products.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-500 text-xs">
-                    No products found. Add a product or seed demo data.
-                  </td>
-                </tr>
+            <tbody>
+              {isLoading ? (
+                <tr><td colSpan={canEdit ? 6 : 5} style={{ textAlign: 'center', color: 'var(--color-ink-mute)', padding: 40 }}>Loading inventory…</td></tr>
+              ) : products.length === 0 ? (
+                <tr><td colSpan={canEdit ? 6 : 5} style={{ textAlign: 'center', color: 'var(--color-ink-mute)', padding: 40 }}>
+                  <Boxes size={28} style={{ margin: '0 auto 8px', display: 'block', opacity: 0.3 }} />
+                  No products found. {canEdit && 'Create your first product above.'}
+                </td></tr>
               ) : (
                 products.map((p) => {
-                  const skuStocks = getStockForSku(p.skuId);
-                  const totalOnHand = skuStocks.reduce((sum, s) => sum + s.quantityOnHand, 0);
-                  const isLow = totalOnHand < p.reorderPoint;
-
+                  const totalStock = getStockForProduct(p.skuId);
+                  const statusClass = getLowStockStyle(p.skuId, p.reorderPoint);
                   return (
-                    <tr key={p.skuId} className="hover:bg-slate-800/30 transition">
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-white">{p.name}</div>
-                        <div className="text-[10px] text-slate-500 font-mono">{p.skuId}</div>
+                    <tr key={p.skuId}>
+                      <td>
+                        <div style={{ fontWeight: 400, color: 'var(--color-ink)', fontSize: 14 }}>{p.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--color-ink-mute)', fontFamily: 'monospace' }}>{p.skuId}</div>
                       </td>
-                      <td className="py-3 px-4 text-slate-300">{p.category}</td>
-                      <td className="py-3 px-4 font-mono font-medium">${Number(p.unitPrice).toFixed(2)}</td>
-                      <td className="py-3 px-4">
-                        <div className="space-y-1">
-                          {skuStocks.map((s) => (
-                            <div key={s.id.locationId} className="flex items-center space-x-2 text-[11px]">
-                              <span className="font-mono text-slate-400">{s.id.locationId}:</span>
-                              <span className="font-bold text-white">{s.quantityOnHand}</span>
-                              {s.quantityReserved > 0 && (
-                                <span className="text-[10px] text-amber-400">({s.quantityReserved} res)</span>
-                              )}
-                              {canEdit && (
-                                <button
-                                  onClick={() => {
-                                    setShowAdjustModal(s);
-                                    setAdjustDelta(0);
-                                  }}
-                                  className="text-[10px] text-emerald-400 hover:underline ml-1"
-                                >
-                                  Adjust
-                                </button>
-                              )}
-                            </div>
-                          ))}
+                      <td><span className="pill-tag pill-neutral" style={{ fontSize: 10 }}>{p.category || '—'}</span></td>
+                      <td><span className="tnum" style={{ color: 'var(--color-ink)', fontWeight: 400 }}>₹{Number(p.unitPrice).toFixed(2)}</span></td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {totalStock === 0 && <AlertTriangle size={12} color="var(--color-ruby)" />}
+                          <span className="tnum" style={{ fontWeight: 400, color: 'var(--color-ink)' }}>{totalStock}</span>
+                          <span style={{ fontSize: 11, color: 'var(--color-ink-mute)' }}>{p.unitOfMeasure}</span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 font-mono">{p.reorderPoint} {p.unitOfMeasure}</td>
-                      <td className="py-3 px-4">
-                        {isLow ? (
-                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-950/70 text-rose-400 border border-rose-800/60">
-                            <AlertTriangle className="w-3 h-3 shrink-0" />
-                            <span>Low Stock</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-950/70 text-emerald-400 border border-emerald-800/60">
-                            Adequate
-                          </span>
-                        )}
+                      <td>
+                        <span className={`pill-tag ${statusClass}`} style={{ fontSize: 9 }}>
+                          {totalStock === 0 ? 'Out of Stock' : totalStock <= p.reorderPoint ? 'Low Stock' : 'In Stock'}
+                        </span>
                       </td>
                       {canEdit && (
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() => {
-                              const whStock = skuStocks.find((s) => s.id.locationId === 'WH-01') || skuStocks[0];
-                              if (whStock) {
-                                setShowAdjustModal(whStock);
-                                setAdjustDelta(0);
-                              }
-                            }}
-                            className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] transition"
-                          >
-                            Update Stock
-                          </button>
+                        <td style={{ textAlign: 'right' }}>
+                          {stocks.filter(s => s.id.skuId === p.skuId).map(s => (
+                            <button
+                              key={`${s.id.skuId}-${s.id.locationId}`}
+                              onClick={() => { setShowAdjustModal(s); setAdjustDelta(0); }}
+                              className="btn-ghost-sm"
+                              style={{ fontSize: 12 }}
+                            >
+                              Adjust · {s.id.locationId}
+                            </button>
+                          ))}
                         </td>
                       )}
                     </tr>
@@ -351,173 +271,89 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* Adjust Stock Modal */}
-      {showAdjustModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="text-sm font-bold text-white">Adjust Stock (Pessimistic Lock)</h3>
-              <button onClick={() => setShowAdjustModal(null)} className="text-slate-500 hover:text-white">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <form onSubmit={handleAdjustStock} className="space-y-4 mt-4">
-              <div className="text-xs text-slate-400">
-                Product: <span className="text-white font-mono">{showAdjustModal.id.skuId}</span>
-                <br />
-                Location: <span className="text-white font-mono">{showAdjustModal.id.locationId}</span>
-                <br />
-                Current On Hand: <span className="text-emerald-400 font-bold">{showAdjustModal.quantityOnHand}</span>
-              </div>
-
-              {adjustError && (
-                <div className="p-2 rounded bg-rose-950/60 border border-rose-800 text-rose-300 text-xs">
-                  {adjustError}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Delta (positive to add, negative to deduct)</label>
-                <input
-                  type="number"
-                  required
-                  value={adjustDelta}
-                  onChange={(e) => setAdjustDelta(Number(e.target.value))}
-                  placeholder="e.g. +10 or -5"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAdjustModal(null)}
-                  className="px-3 py-2 rounded-lg bg-slate-800 text-slate-300 text-xs hover:bg-slate-700 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition"
-                >
-                  Commit Adjustment
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Create Product Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="text-sm font-bold text-white">Create New Product (C1.2)</h3>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-500 hover:text-white">
-                <X className="w-4 h-4" />
-              </button>
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div className="text-heading-sm" style={{ color: 'var(--color-ink)' }}>Create New Product</div>
+              <button onClick={() => setShowCreateModal(false)} className="btn-ghost-sm" style={{ padding: '4px 8px' }}><X size={14} /></button>
             </div>
-            <form onSubmit={handleCreateProduct} className="space-y-3 mt-4">
-              {createError && (
-                <div className="p-2 rounded bg-rose-950/60 border border-rose-800 text-rose-300 text-xs">
-                  {createError}
+            <hr className="divider" style={{ marginBottom: 20 }} />
+            {createError && <div className="banner-error" style={{ marginBottom: 16 }}><AlertTriangle size={14} />{createError}</div>}
+            <form onSubmit={handleCreateProduct} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {[
+                { label: 'SKU ID *', val: newSku, set: setNewSku, ph: 'e.g. SKU-101' },
+                { label: 'Name *',   val: newName, set: setNewName, ph: 'e.g. Laptop Bag' },
+                { label: 'Category *', val: newCategory, set: setNewCategory, ph: 'e.g. Electronics' },
+                { label: 'Unit of Measure *', val: newUom, set: setNewUom, ph: 'PCS' },
+              ].map(({ label, val, set, ph }) => (
+                <div key={label}>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--color-ink-mute)', marginBottom: 5 }}>{label}</label>
+                  <input required value={val} onChange={e => set(e.target.value)} placeholder={ph} className="input" style={{ fontSize: 14 }} />
                 </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3">
+              ))}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">SKU ID</label>
-                  <input
-                    type="text"
-                    required
-                    value={newSku}
-                    onChange={(e) => setNewSku(e.target.value)}
-                    placeholder="e.g. SKU-5001"
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--color-ink-mute)', marginBottom: 5 }}>Unit Price *</label>
+                  <input type="number" step="0.01" min={0} required value={newPrice} onChange={e => setNewPrice(Number(e.target.value))} className="input" style={{ fontSize: 14 }} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Category</label>
-                  <input
-                    type="text"
-                    required
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    placeholder="e.g. Electronics"
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--color-ink-mute)', marginBottom: 5 }}>Reorder Point *</label>
+                  <input type="number" min={0} required value={newReorderPoint} onChange={e => setNewReorderPoint(Number(e.target.value))} className="input" style={{ fontSize: 14 }} />
                 </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Product Name</label>
-                <input
-                  type="text"
-                  required
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="e.g. Wireless Barcode Scanner"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Unit Price ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={newPrice}
-                    onChange={(e) => setNewPrice(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Reorder Point</label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={newReorderPoint}
-                    onChange={(e) => setNewReorderPoint(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Unit of Measure</label>
-                  <input
-                    type="text"
-                    required
-                    value={newUom}
-                    onChange={(e) => setNewUom(e.target.value)}
-                    placeholder="PCS"
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-3 py-2 rounded-lg bg-slate-800 text-slate-300 text-xs hover:bg-slate-700 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition"
-                >
-                  Create Product
-                </button>
+              <hr className="divider" />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button type="button" onClick={() => setShowCreateModal(false)} className="btn-ghost-sm">Cancel</button>
+                <button type="submit" className="btn-primary-sm">Create Product</button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Adjust Stock Modal */}
+      {showAdjustModal && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div className="text-heading-sm" style={{ color: 'var(--color-ink)' }}>Adjust Stock</div>
+              <button onClick={() => setShowAdjustModal(null)} className="btn-ghost-sm" style={{ padding: '4px 8px' }}><X size={14} /></button>
+            </div>
+            <hr className="divider" style={{ marginBottom: 20 }} />
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 13, color: 'var(--color-ink-mute)', marginBottom: 2 }}>SKU · Location</div>
+              <div style={{ fontWeight: 400, fontSize: 15, color: 'var(--color-ink)' }}>
+                {showAdjustModal.id.skuId} · {showAdjustModal.id.locationId}
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div style={{ padding: '12px 16px', background: 'var(--color-canvas-soft)', borderRadius: 8, border: '1px solid var(--color-hairline)' }}>
+                <div style={{ fontSize: 11, color: 'var(--color-ink-mute)', marginBottom: 4 }}>CURRENT QTY</div>
+                <div className="tnum" style={{ fontSize: 20, fontWeight: 400, color: 'var(--color-ink)' }}>{showAdjustModal.quantityOnHand}</div>
+              </div>
+              <div style={{ padding: '12px 16px', background: 'var(--color-canvas-soft)', borderRadius: 8, border: '1px solid var(--color-hairline)' }}>
+                <div style={{ fontSize: 11, color: 'var(--color-ink-mute)', marginBottom: 4 }}>AFTER ADJUSTMENT</div>
+                <div className="tnum" style={{ fontSize: 20, fontWeight: 400, color: adjustDelta < 0 && showAdjustModal.quantityOnHand + adjustDelta < 0 ? 'var(--color-ruby)' : 'var(--color-primary)' }}>
+                  {showAdjustModal.quantityOnHand + adjustDelta}
+                </div>
+              </div>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--color-ink-mute)', marginBottom: 6 }}>Delta (+ to add, − to remove)</label>
+              <input type="number" value={adjustDelta} onChange={e => setAdjustDelta(Number(e.target.value))} className="input" style={{ fontSize: 15 }} />
+            </div>
+            {adjustError && <div className="banner-error" style={{ marginBottom: 12 }}><AlertTriangle size={14} />{adjustError}</div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button onClick={() => setShowAdjustModal(null)} className="btn-ghost-sm">Cancel</button>
+              <button onClick={handleAdjustStock} className="btn-primary-sm">Apply Adjustment</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

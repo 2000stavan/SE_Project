@@ -6,11 +6,9 @@ import {
   Plus,
   CheckCircle2,
   AlertTriangle,
-  XCircle,
   Truck,
   Calendar,
   X,
-  PackageCheck,
   Ban,
   AlertCircle,
   Eye,
@@ -238,78 +236,56 @@ export default function PurchaseOrdersPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusClass = (status: string) => {
     switch (status) {
-      case 'Draft':
-        return 'bg-slate-800 text-slate-300 border-slate-700';
-      case 'Pending Approval':
-        return 'bg-amber-950/70 text-amber-400 border-amber-800/60';
-      case 'Approved':
-        return 'bg-blue-950/70 text-blue-400 border-blue-800/60';
-      case 'Partially Received':
-        return 'bg-purple-950/70 text-purple-400 border-purple-800/60';
-      case 'Received':
-        return 'bg-emerald-950/70 text-emerald-400 border-emerald-800/60';
-      case 'Cancelled':
-        return 'bg-rose-950/70 text-rose-400 border-rose-800/60';
-      default:
-        return 'bg-slate-800 text-slate-300 border-slate-700';
+      case 'Draft':              return 'pill-neutral';
+      case 'Pending Approval':   return 'pill-warning';
+      case 'Approved':           return 'pill-indigo';
+      case 'Partially Received': return 'pill-dark';
+      case 'Received':           return 'pill-success';
+      case 'Cancelled':          return 'pill-error';
+      default:                   return 'pill-neutral';
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800 pb-5">
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderBottom: '1px solid var(--color-hairline)', paddingBottom: 20, marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
-            <ClipboardList className="w-6 h-6 text-emerald-400" />
-            Purchase Orders & Procurement
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            6-state procurement lifecycle, multi-tier approvals, credit checks, and stock receipt (C2)
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <ClipboardList size={22} color="var(--color-primary)" strokeWidth={1.5} />
+            <span className="text-heading-lg" style={{ color: 'var(--color-ink)' }}>Purchase Orders & Procurement</span>
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--color-ink-mute)', fontWeight: 300 }}>6-state lifecycle, multi-tier approvals, credit checks & goods receipt (C2)</div>
         </div>
         {isManagerOrAdmin && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-sm transition"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create Purchase Order</span>
+          <button onClick={() => setShowCreateModal(true)} className="btn-primary-sm">
+            <Plus size={13} /> Create PO
           </button>
         )}
       </div>
 
       {/* Alert Messages */}
       {errorMsg && (
-        <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{errorMsg}</span>
-          </div>
-          <button onClick={() => setErrorMsg(null)} className="hover:text-white">
-            <X className="w-3.5 h-3.5" />
-          </button>
+        <div className="banner-error" style={{ marginBottom: 16 }}>
+          <AlertCircle size={15} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1 }}>{errorMsg}</span>
+          <button onClick={() => setErrorMsg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}><X size={13} /></button>
         </div>
       )}
-
       {successMsg && (
-        <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 text-xs flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{successMsg}</span>
-          </div>
-          <button onClick={() => setSuccessMsg(null)} className="hover:text-white">
-            <X className="w-3.5 h-3.5" />
-          </button>
+        <div className="banner-success" style={{ marginBottom: 16 }}>
+          <CheckCircle2 size={15} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1 }}>{successMsg}</span>
+          <button onClick={() => setSuccessMsg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}><X size={13} /></button>
         </div>
       )}
 
       {/* Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-800 pb-3">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
         {[
-          { label: 'All Orders', value: '' },
+          { label: 'All', value: '' },
           { label: 'Draft', value: 'Draft' },
           { label: 'Pending Approval', value: 'Pending Approval' },
           { label: 'Approved', value: 'Approved' },
@@ -320,11 +296,14 @@ export default function PurchaseOrdersPage() {
           <button
             key={tab.value}
             onClick={() => setStatusFilter(tab.value)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-              statusFilter === tab.value
-                ? 'bg-slate-800 text-emerald-400 shadow-sm border border-slate-700'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            }`}
+            style={{
+              padding: '5px 14px', borderRadius: 'var(--radius-pill)',
+              fontSize: 13, fontWeight: statusFilter === tab.value ? 400 : 300,
+              border: statusFilter === tab.value ? '1px solid var(--color-primary)' : '1px solid var(--color-hairline)',
+              backgroundColor: statusFilter === tab.value ? 'rgba(83,58,253,0.08)' : 'transparent',
+              color: statusFilter === tab.value ? 'var(--color-primary)' : 'var(--color-ink-mute)',
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}
           >
             {tab.label}
           </button>
@@ -332,141 +311,65 @@ export default function PurchaseOrdersPage() {
       </div>
 
       {/* Orders Table */}
-      <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/40">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900 text-slate-400 border-b border-slate-800 uppercase tracking-wider text-[10px]">
+      <div style={{ border: '1px solid var(--color-hairline)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-1)' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="data-table">
+            <thead>
               <tr>
-                <th className="px-4 py-3">PO Reference</th>
-                <th className="px-4 py-3">Supplier</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Dates</th>
-                <th className="px-4 py-3">Assigned Staff</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th>PO Reference</th>
+                <th>Supplier</th>
+                <th>Status</th>
+                <th>Dates</th>
+                <th>Staff</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                    Loading purchase orders...
-                  </td>
-                </tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--color-ink-mute)', padding: 40 }}>Loading purchase orders…</td></tr>
               ) : orders.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                    No purchase orders found matching this filter.
-                  </td>
-                </tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--color-ink-mute)', padding: 40 }}>No purchase orders match this filter.</td></tr>
               ) : (
                 orders.map((po) => {
-                  const isOverdue =
-                    po.expectedDate &&
-                    new Date(po.expectedDate) < new Date() &&
-                    (po.status === 'Approved' || po.status === 'Partially Received');
-
+                  const isOverdue = po.expectedDate && new Date(po.expectedDate) < new Date() && (po.status === 'Approved' || po.status === 'Partially Received');
                   return (
-                    <tr key={po.poId} className="hover:bg-slate-800/30 transition">
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-white font-mono">{po.poId}</div>
-                        {isOverdue && (
-                          <span className="inline-flex items-center space-x-1 text-[10px] text-amber-400 font-bold mt-0.5">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>OVERDUE</span>
-                          </span>
-                        )}
+                    <tr key={po.poId}>
+                      <td>
+                        <div style={{ fontWeight: 400, color: 'var(--color-ink)', fontFamily: 'monospace', fontSize: 13 }}>{po.poId}</div>
+                        {isOverdue && <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#854d0e', marginTop: 2 }}><AlertTriangle size={10} />OVERDUE</div>}
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-slate-200">{po.supplierName}</div>
-                        <div className="text-[10px] text-slate-500 font-mono">{po.supplierId}</div>
+                      <td>
+                        <div style={{ fontWeight: 400, fontSize: 14, color: 'var(--color-ink)' }}>{po.supplierName}</div>
+                        <div style={{ fontSize: 11, color: 'var(--color-ink-mute)', fontFamily: 'monospace' }}>{po.supplierId}</div>
                       </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${getStatusBadge(
-                            po.status
-                          )}`}
-                        >
-                          {po.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-slate-300">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="w-3 h-3 text-slate-500" />
-                          <span>Ordered: {po.orderDate}</span>
+                      <td><span className={`pill-tag ${getStatusClass(po.status)}`} style={{ fontSize: 9 }}>{po.status}</span></td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: 'var(--color-ink-secondary)' }}>
+                          <Calendar size={11} color="var(--color-ink-mute)" />
+                          <span className="tnum">{po.orderDate}</span>
                         </div>
-                        {po.expectedDate && (
-                          <div className="text-[10px] text-slate-500 mt-0.5">
-                            Expected: {po.expectedDate}
-                          </div>
-                        )}
+                        {po.expectedDate && <div className="tnum" style={{ fontSize: 11, color: 'var(--color-ink-mute)', marginTop: 2 }}>Exp: {po.expectedDate}</div>}
                       </td>
-                      <td className="px-4 py-3 text-slate-400 text-[11px]">
+                      <td style={{ fontSize: 12, color: 'var(--color-ink-mute)' }}>
                         <div>Mgr: {po.managerId || '—'}</div>
                         <div>Whs: {po.warehouseStaffId || '—'}</div>
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end space-x-1.5">
-                          <button
-                            onClick={() => openDetailsModal(po.poId)}
-                            title="View PO Details"
-                            className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </button>
-
-                          {/* Draft State Actions */}
-                          {po.status === 'Draft' && isManagerOrAdmin && (
-                            <button
-                              onClick={() => handleSubmit(po.poId)}
-                              className="px-2 py-0.5 rounded bg-blue-900/60 text-blue-300 hover:bg-blue-800/80 border border-blue-700/60 text-[11px] font-medium transition"
-                            >
-                              Submit
-                            </button>
-                          )}
-
-                          {/* Pending Approval Actions */}
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                          <button onClick={() => openDetailsModal(po.poId)} className="btn-ghost-sm" style={{ fontSize: 12 }} title="View"><Eye size={12} /></button>
+                          {po.status === 'Draft' && isManagerOrAdmin && <button onClick={() => handleSubmit(po.poId)} className="btn-ghost-sm" style={{ fontSize: 12, color: 'var(--color-primary)', borderColor: 'var(--color-primary-bg-subdued)' }}>Submit</button>}
                           {po.status === 'Pending Approval' && isManagerOrAdmin && (
                             <>
-                              <button
-                                onClick={() => handleApprove(po.poId)}
-                                className="px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 hover:bg-emerald-800/80 border border-emerald-700/60 text-[11px] font-medium transition"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => setRejectingPoId(po.poId)}
-                                className="px-2 py-0.5 rounded bg-rose-950/60 text-rose-300 hover:bg-rose-900/80 border border-rose-800/60 text-[11px] font-medium transition"
-                              >
-                                Reject
-                              </button>
+                              <button onClick={() => handleApprove(po.poId)} className="btn-ghost-sm" style={{ fontSize: 12, color: '#166534', borderColor: '#bbf7d0' }}>Approve</button>
+                              <button onClick={() => setRejectingPoId(po.poId)} className="btn-ghost-sm" style={{ fontSize: 12, color: '#b91c1c', borderColor: '#fca5a5' }}>Reject</button>
                             </>
                           )}
-
-                          {/* Receiving Actions */}
-                          {(po.status === 'Approved' || po.status === 'Partially Received') &&
-                            isWarehouse && (
-                              <button
-                                onClick={() => openReceiveModal(po)}
-                                className="px-2 py-0.5 rounded bg-purple-900/60 text-purple-300 hover:bg-purple-800/80 border border-purple-700/60 text-[11px] font-medium flex items-center space-x-1 transition"
-                              >
-                                <Truck className="w-3 h-3" />
-                                <span>Receive</span>
-                              </button>
-                            )}
-
-                          {/* Cancel Action */}
-                          {(po.status === 'Draft' ||
-                            po.status === 'Pending Approval' ||
-                            po.status === 'Approved') &&
-                            isManagerOrAdmin && (
-                              <button
-                                onClick={() => handleCancel(po.poId)}
-                                title="Cancel PO"
-                                className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 transition"
-                              >
-                                <Ban className="w-3.5 h-3.5" />
-                              </button>
-                            )}
+                          {(po.status === 'Approved' || po.status === 'Partially Received') && isWarehouse && (
+                            <button onClick={() => openReceiveModal(po)} className="btn-ghost-sm" style={{ fontSize: 12 }}><Truck size={11} /> Receive</button>
+                          )}
+                          {(['Draft','Pending Approval','Approved'].includes(po.status)) && isManagerOrAdmin && (
+                            <button onClick={() => handleCancel(po.poId)} className="btn-ghost-sm" style={{ fontSize: 12, color: '#b91c1c', borderColor: '#fca5a5' }} title="Cancel"><Ban size={11} /></button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -480,97 +383,40 @@ export default function PurchaseOrdersPage() {
 
       {/* Create Purchase Order Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-5 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h2 className="text-base font-bold text-white flex items-center space-x-2">
-                <ClipboardList className="w-4 h-4 text-emerald-400" />
-                <span>Create Purchase Order Draft</span>
-              </h2>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-white">
-                <X className="w-4 h-4" />
-              </button>
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div className="text-heading-sm" style={{ color: 'var(--color-ink)' }}>Create Purchase Order Draft</div>
+              <button onClick={() => setShowCreateModal(false)} className="btn-ghost-sm" style={{ padding: '4px 8px' }}><X size={14} /></button>
             </div>
-
-            <form onSubmit={handleCreate} className="space-y-3">
+            <hr className="divider" style={{ marginBottom: 20 }} />
+            <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                  Supplier *
-                </label>
-                <select
-                  required
-                  value={selectedSupplier}
-                  onChange={(e) => setSelectedSupplier(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                >
-                  {suppliers.map((s) => (
-                    <option key={s.supplierId} value={s.supplierId}>
-                      {s.name} ({s.supplierId})
-                    </option>
-                  ))}
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--color-ink-mute)', marginBottom: 5 }}>Supplier *</label>
+                <select required value={selectedSupplier} onChange={(e) => setSelectedSupplier(e.target.value)} className="input" style={{ fontSize: 14 }}>
+                  {suppliers.map((s) => <option key={s.supplierId} value={s.supplierId}>{s.name} ({s.supplierId})</option>)}
                 </select>
               </div>
-
               <div>
-                <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                  Product Item *
-                </label>
-                <select
-                  required
-                  value={selectedSku}
-                  onChange={(e) => setSelectedSku(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                >
-                  {products.map((p) => (
-                    <option key={p.skuId} value={p.skuId}>
-                      {p.name} ({p.skuId}) — ₹{p.unitPrice}
-                    </option>
-                  ))}
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--color-ink-mute)', marginBottom: 5 }}>Product Item *</label>
+                <select required value={selectedSku} onChange={(e) => setSelectedSku(e.target.value)} className="input" style={{ fontSize: 14 }}>
+                  {products.map((p) => <option key={p.skuId} value={p.skuId}>{p.name} ({p.skuId}) — ₹{p.unitPrice}</option>)}
                 </select>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                    Quantity Ordered *
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    required
-                    value={orderQty}
-                    onChange={(e) => setOrderQty(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--color-ink-mute)', marginBottom: 5 }}>Quantity *</label>
+                  <input type="number" min={1} required value={orderQty} onChange={(e) => setOrderQty(Number(e.target.value))} className="input" style={{ fontSize: 14 }} />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                    Expected Delivery Date *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={expectedDate}
-                    onChange={(e) => setExpectedDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--color-ink-mute)', marginBottom: 5 }}>Expected Date *</label>
+                  <input type="date" required value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} className="input" style={{ fontSize: 14 }} />
                 </div>
               </div>
-
-              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-3 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-white text-xs transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow transition"
-                >
-                  Create PO Draft
-                </button>
+              <hr className="divider" />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button type="button" onClick={() => setShowCreateModal(false)} className="btn-ghost-sm">Cancel</button>
+                <button type="submit" className="btn-primary-sm">Create PO Draft</button>
               </div>
             </form>
           </div>
@@ -579,41 +425,18 @@ export default function PurchaseOrdersPage() {
 
       {/* Reject Modal */}
       {rejectingPoId && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-sm w-full p-5 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <h3 className="text-sm font-bold text-white flex items-center space-x-2">
-                <XCircle className="w-4 h-4 text-rose-400" />
-                <span>Reject Purchase Order</span>
-              </h3>
-              <button onClick={() => setRejectingPoId(null)} className="text-slate-400 hover:text-white">
-                <X className="w-4 h-4" />
-              </button>
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div className="text-heading-sm" style={{ color: 'var(--color-ink)' }}>Reject Purchase Order</div>
+              <button onClick={() => setRejectingPoId(null)} className="btn-ghost-sm" style={{ padding: '4px 8px' }}><X size={14} /></button>
             </div>
-            <p className="text-xs text-slate-400">
-              Provide a rejection reason. The order status will revert to Draft and a notification will be generated (D8).
-            </p>
-            <textarea
-              required
-              rows={3}
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="e.g. Total exceeds departmental budget cap"
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-rose-500"
-            />
-            <div className="flex items-center justify-end space-x-2">
-              <button
-                onClick={() => setRejectingPoId(null)}
-                className="px-3 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-white text-xs transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleRejectConfirm}
-                className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs shadow transition"
-              >
-                Confirm Rejection
-              </button>
+            <hr className="divider" style={{ marginBottom: 14 }} />
+            <p style={{ fontSize: 14, color: 'var(--color-ink-mute)', marginBottom: 14 }}>Provide a reason. The PO will revert to Draft and a notification will be sent.</p>
+            <textarea required rows={3} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="e.g. Total exceeds budget cap" className="input" style={{ fontSize: 14, resize: 'vertical', marginBottom: 16 }} />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button onClick={() => setRejectingPoId(null)} className="btn-ghost-sm">Cancel</button>
+              <button onClick={handleRejectConfirm} className="btn-primary-sm" style={{ backgroundColor: '#b91c1c' }}>Confirm Rejection</button>
             </div>
           </div>
         </div>
@@ -621,174 +444,90 @@ export default function PurchaseOrdersPage() {
 
       {/* Receive Stock Modal */}
       {receivingPo && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-lg w-full p-5 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="modal-overlay">
+          <div className="modal-box modal-box-lg">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <div>
-                <h3 className="text-base font-bold text-white flex items-center space-x-2">
-                  <PackageCheck className="w-4 h-4 text-purple-400" />
-                  <span>Receive Inventory Shipment</span>
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">{receivingPo.poId} — {receivingPo.supplierName}</p>
+                <div className="text-heading-sm" style={{ color: 'var(--color-ink)' }}>Receive Inventory Shipment</div>
+                <div style={{ fontSize: 13, color: 'var(--color-ink-mute)', marginTop: 2 }}>{receivingPo.poId} · {receivingPo.supplierName}</div>
               </div>
-              <button onClick={() => setReceivingPo(null)} className="text-slate-400 hover:text-white">
-                <X className="w-4 h-4" />
-              </button>
+              <button onClick={() => setReceivingPo(null)} className="btn-ghost-sm" style={{ padding: '4px 8px' }}><X size={14} /></button>
             </div>
-
-            <form onSubmit={handleReceiveSubmit} className="space-y-4">
+            <hr className="divider" style={{ marginBottom: 20 }} />
+            <form onSubmit={handleReceiveSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                  Target Warehouse Location *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={receiveLocation}
-                  onChange={(e) => setReceiveLocation(e.target.value)}
-                  placeholder="WH-01"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500"
-                />
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--color-ink-mute)', marginBottom: 5 }}>Target Warehouse Location *</label>
+                <input type="text" required value={receiveLocation} onChange={(e) => setReceiveLocation(e.target.value)} placeholder="WH-01" className="input" style={{ fontSize: 14 }} />
               </div>
-
-              <div className="space-y-2">
-                <label className="block text-[11px] font-medium text-slate-400">
-                  Line Items & Quantities to Receive:
-                </label>
-                <div className="divide-y divide-slate-800/80 border border-slate-800 rounded-lg overflow-hidden bg-slate-950">
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--color-ink-mute)', marginBottom: 8 }}>Line Items & Quantities to Receive</div>
+                <div style={{ border: '1px solid var(--color-hairline)', borderRadius: 8, overflow: 'hidden' }}>
                   {receivingPo.lines?.map((line) => {
                     const remaining = Math.max(0, line.quantityOrdered - line.quantityReceived);
                     return (
-                      <div key={line.skuId} className="p-3 flex items-center justify-between gap-3 text-xs">
+                      <div key={line.skuId} style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderBottom: '1px solid var(--color-hairline)' }}>
                         <div>
-                          <div className="font-semibold text-white">{line.productName}</div>
-                          <div className="text-[10px] text-slate-500 font-mono">{line.skuId}</div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">
-                            Ordered: <span className="text-white font-medium">{line.quantityOrdered}</span> | Received so far:{' '}
-                            <span className="text-purple-400 font-medium">{line.quantityReceived}</span>
-                          </div>
+                          <div style={{ fontWeight: 400, fontSize: 14, color: 'var(--color-ink)' }}>{line.productName}</div>
+                          <div style={{ fontSize: 11, color: 'var(--color-ink-mute)', fontFamily: 'monospace' }}>{line.skuId}</div>
+                          <div className="tnum" style={{ fontSize: 12, color: 'var(--color-ink-mute)', marginTop: 2 }}>Ordered: {line.quantityOrdered} · Received: {line.quantityReceived}</div>
                         </div>
-
-                        <div className="flex items-center space-x-2">
-                          <label className="text-[10px] text-slate-500">Qty now:</label>
-                          <input
-                            type="number"
-                            min={0}
-                            max={remaining}
-                            value={receiveQtys[line.skuId] ?? 0}
-                            onChange={(e) =>
-                              setReceiveQtys({ ...receiveQtys, [line.skuId]: Number(e.target.value) })
-                            }
-                            className="w-20 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-purple-500"
-                          />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <label style={{ fontSize: 11, color: 'var(--color-ink-mute)' }}>Qty now:</label>
+                          <input type="number" min={0} max={remaining} value={receiveQtys[line.skuId] ?? 0} onChange={(e) => setReceiveQtys({ ...receiveQtys, [line.skuId]: Number(e.target.value) })} className="input" style={{ width: 80, fontSize: 14, textAlign: 'right' }} />
                         </div>
                       </div>
                     );
                   })}
                 </div>
               </div>
-
-              <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setReceivingPo(null)}
-                  className="px-3 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-white text-xs transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs shadow transition"
-                >
-                  Confirm Receipt
-                </button>
+              <hr className="divider" />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button type="button" onClick={() => setReceivingPo(null)} className="btn-ghost-sm">Cancel</button>
+                <button type="submit" className="btn-primary-sm">Confirm Receipt</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Details View Modal */}
+      {/* Details Modal */}
       {activePoDetails && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-lg w-full p-5 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="modal-overlay">
+          <div className="modal-box modal-box-lg">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <div>
-                <h3 className="text-base font-bold text-white flex items-center space-x-2">
-                  <ClipboardList className="w-4 h-4 text-emerald-400" />
-                  <span>Purchase Order Details</span>
-                </h3>
-                <p className="text-xs text-slate-400 font-mono mt-0.5">{activePoDetails.poId}</p>
+                <div className="text-heading-sm" style={{ color: 'var(--color-ink)' }}>Purchase Order Details</div>
+                <div style={{ fontSize: 12, color: 'var(--color-ink-mute)', fontFamily: 'monospace', marginTop: 2 }}>{activePoDetails.poId}</div>
               </div>
-              <button onClick={() => setActivePoDetails(null)} className="text-slate-400 hover:text-white">
-                <X className="w-4 h-4" />
-              </button>
+              <button onClick={() => setActivePoDetails(null)} className="btn-ghost-sm" style={{ padding: '4px 8px' }}><X size={14} /></button>
             </div>
-
-            <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs">
-              <div>
-                <span className="text-[10px] text-slate-500 uppercase block">Supplier</span>
-                <span className="font-semibold text-white">{activePoDetails.supplierName}</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 uppercase block">Status</span>
-                <span
-                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border inline-block mt-0.5 ${getStatusBadge(
-                    activePoDetails.status
-                  )}`}
-                >
-                  {activePoDetails.status}
-                </span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 uppercase block">Order Date</span>
-                <span className="text-slate-300">{activePoDetails.orderDate}</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 uppercase block">Expected Delivery</span>
-                <span className="text-slate-300">{activePoDetails.expectedDate || '—'}</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 uppercase block">Total Amount</span>
-                <span className="text-emerald-400 font-bold">
-                  ₹{Number(activePoDetails.totalAmount ?? 0).toLocaleString()}
-                </span>
-              </div>
+            <hr className="divider" style={{ marginBottom: 16 }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              {[{label:'Supplier',val:activePoDetails.supplierName},{label:'Status',val:<span className={`pill-tag ${getStatusClass(activePoDetails.status)}`} style={{fontSize:9}}>{activePoDetails.status}</span>},{label:'Order Date',val:<span className="tnum">{activePoDetails.orderDate}</span>},{label:'Expected',val:<span className="tnum">{activePoDetails.expectedDate||'—'}</span>},{label:'Total Amount',val:<span className="tnum" style={{fontWeight:400,color:'var(--color-primary)'}}>₹{Number(activePoDetails.totalAmount??0).toLocaleString()}</span>}].map(({label,val})=>(
+                <div key={label} style={{padding:'10px 14px',background:'var(--color-canvas-soft)',borderRadius:8,border:'1px solid var(--color-hairline)'}}>
+                  <div style={{fontSize:10,color:'var(--color-ink-mute)',textTransform:'uppercase',letterSpacing:'0.1px',marginBottom:4}}>{label}</div>
+                  <div style={{fontSize:14,fontWeight:400,color:'var(--color-ink)'}}>{val as any}</div>
+                </div>
+              ))}
             </div>
-
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                Line Items Breakdown
-              </label>
-              <div className="border border-slate-800 rounded-lg overflow-hidden bg-slate-950 divide-y divide-slate-800/80">
-                {activePoDetails.lines?.map((line) => (
-                  <div key={line.skuId} className="p-3 text-xs flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-white">{line.productName}</div>
-                      <div className="text-[10px] text-slate-500 font-mono">{line.skuId}</div>
-                      <div className="text-[11px] text-slate-400 mt-1">
-                        Ordered: <span className="text-white">{line.quantityOrdered}</span> | Received:{' '}
-                        <span className="text-emerald-400 font-semibold">{line.quantityReceived}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-white font-medium">₹{line.unitPrice} / unit</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">
-                        Total: ₹{(line.quantityOrdered * line.unitPrice).toLocaleString()}
-                      </div>
-                    </div>
+            <div style={{ fontSize: 12, color: 'var(--color-ink-mute)', marginBottom: 8 }}>Line Items</div>
+            <div style={{ border: '1px solid var(--color-hairline)', borderRadius: 8, overflow: 'hidden', marginBottom: 20 }}>
+              {activePoDetails.lines?.map((line) => (
+                <div key={line.skuId} style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--color-hairline)' }}>
+                  <div>
+                    <div style={{ fontWeight: 400, fontSize: 14, color: 'var(--color-ink)' }}>{line.productName}</div>
+                    <div style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--color-ink-mute)' }}>{line.skuId}</div>
+                    <div className="tnum" style={{ fontSize: 12, color: 'var(--color-ink-mute)', marginTop: 2 }}>Ordered: {line.quantityOrdered} · Received: {line.quantityReceived}</div>
                   </div>
-                ))}
-              </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div className="tnum" style={{ fontWeight: 400, color: 'var(--color-ink)', fontSize: 14 }}>₹{line.unitPrice}/unit</div>
+                    <div className="tnum" style={{ fontSize: 12, color: 'var(--color-ink-mute)' }}>₹{(line.quantityOrdered * line.unitPrice).toLocaleString()}</div>
+                  </div>
+                </div>
+              ))}
             </div>
-
-            <div className="flex justify-end pt-2 border-t border-slate-800">
-              <button
-                onClick={() => setActivePoDetails(null)}
-                className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs transition"
-              >
-                Close
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setActivePoDetails(null)} className="btn-ghost-sm">Close</button>
             </div>
           </div>
         </div>

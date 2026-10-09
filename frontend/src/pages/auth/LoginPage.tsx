@@ -1,21 +1,21 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { ShieldCheck, UserCheck, Package, ShoppingCart, Lock, AlertCircle } from 'lucide-react';
+import { ShieldCheck, UserCheck, Package, ShoppingCart, Lock, AlertCircle, ArrowRight } from 'lucide-react';
 
 interface QuickAccount {
   label: string;
   id: string;
   role: string;
   icon: typeof ShieldCheck;
-  color: string;
+  accent: string;
 }
 
 const DEMO_ACCOUNTS: QuickAccount[] = [
-  { label: 'Alice Admin', id: 'USR-ADMIN-1', role: 'Administrator', icon: ShieldCheck, color: 'text-purple-400 bg-purple-950/40 border-purple-800/50' },
-  { label: 'Bob Manager', id: 'USR-MGR-1', role: 'Manager', icon: UserCheck, color: 'text-blue-400 bg-blue-950/40 border-blue-800/50' },
-  { label: 'Charlie Warehouse', id: 'USR-WH-1', role: 'Warehouse Staff', icon: Package, color: 'text-amber-400 bg-amber-950/40 border-amber-800/50' },
-  { label: 'Dave Sales', id: 'USR-SALES-1', role: 'Sales Personnel', icon: ShoppingCart, color: 'text-emerald-400 bg-emerald-950/40 border-emerald-800/50' },
+  { label: 'Alice Admin',        id: 'USR-ADMIN-1',  role: 'Administrator',    icon: ShieldCheck,  accent: 'var(--color-brand-dark-900)' },
+  { label: 'Bob Manager',        id: 'USR-MGR-1',    role: 'Manager',           icon: UserCheck,    accent: 'var(--color-primary)' },
+  { label: 'Charlie Warehouse',  id: 'USR-WH-1',     role: 'Warehouse Staff',   icon: Package,      accent: '#9b6829' },
+  { label: 'Dave Sales',         id: 'USR-SALES-1',  role: 'Sales Personnel',   icon: ShoppingCart, accent: '#166534' },
 ];
 
 export default function LoginPage() {
@@ -33,19 +33,13 @@ export default function LoginPage() {
       setError('Please provide a User ID or Email');
       return;
     }
-
     setError(null);
     setIsLoading(true);
-
     try {
       await login({ user_id: identifier.trim(), password });
       navigate('/');
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Login failed. Please check credentials.');
-      }
+      setError(err instanceof Error ? err.message : 'Login failed. Please check credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -56,38 +50,73 @@ export default function LoginPage() {
     setPassword('Password123!');
     setError(null);
     setIsLoading(true);
-
     try {
       await login({ user_id: acc.id, password: 'Password123!' });
       navigate('/');
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Quick login failed');
-      }
+      setError(err instanceof Error ? err.message : 'Quick login failed');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 text-slate-100">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="inline-flex w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 items-center justify-center font-bold text-slate-950 text-xl shadow-lg shadow-emerald-900/30 mb-4">
-          IS
-        </div>
-        <h2 className="text-3xl font-extrabold tracking-tight text-white">ISMS Authentication</h2>
-        <p className="mt-2 text-sm text-slate-400">Inventory & Stock Management System — Release 1.0</p>
-      </div>
+    <div className="gradient-mesh" style={{
+      minHeight: '100vh',
+      backgroundColor: 'var(--color-canvas-soft)',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      padding: '24px 16px',
+    }}>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-slate-900/80 backdrop-blur border border-slate-800 py-8 px-6 shadow-2xl rounded-2xl sm:px-10">
-          <div className="mb-6">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-              Fast Demo Sign-In (4 Roles)
-            </label>
-            <div className="grid grid-cols-2 gap-2">
+      {/* Gradient mesh fills the top 50% */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: '55%',
+        pointerEvents: 'none', zIndex: 0,
+        background: `
+          radial-gradient(ellipse 80% 80% at 0% 0%,   rgba(245,233,212,0.85) 0%, transparent 55%),
+          radial-gradient(ellipse 60% 60% at 25% 15%, rgba(249,107,238,0.40) 0%, transparent 50%),
+          radial-gradient(ellipse 70% 70% at 65% 5%,  rgba(102,94,253,0.60)  0%, transparent 55%),
+          radial-gradient(ellipse 50% 50% at 88% 20%, rgba(234,34,97,0.35)   0%, transparent 50%),
+          radial-gradient(ellipse 100% 60% at 50% 50%,rgba(179,179,249,0.20) 0%, transparent 60%)`,
+      }} />
+
+      {/* Login card — floats over gradient */}
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 460 }}>
+
+        {/* Brand wordmark */}
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{
+            display: 'inline-flex', width: 52, height: 52, borderRadius: 14,
+            background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-soft) 100%)',
+            alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontWeight: 600, fontSize: 16,
+            boxShadow: '0 4px 16px rgba(83,58,253,0.40)',
+            marginBottom: 16,
+          }}>IS</div>
+          <div className="text-display-md" style={{ color: 'var(--color-ink)', marginBottom: 6 }}>
+            ISMS Sign In
+          </div>
+          <div style={{ fontSize: 15, color: 'var(--color-ink-mute)', fontWeight: 300 }}>
+            Inventory & Stock Management System — Release 1.0
+          </div>
+        </div>
+
+        {/* Card */}
+        <div style={{
+          backgroundColor: 'var(--color-canvas)',
+          border: '1px solid var(--color-hairline)',
+          borderRadius: 'var(--radius-xl)',
+          boxShadow: 'var(--shadow-2)',
+          padding: '32px 32px 28px',
+        }}>
+
+          {/* Quick demo sign-in */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 10, fontWeight: 400, letterSpacing: '0.1px', textTransform: 'uppercase', color: 'var(--color-ink-mute)', marginBottom: 12 }}>
+              Demo Accounts — 4 Roles
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {DEMO_ACCOUNTS.map((acc) => {
                 const Icon = acc.icon;
                 return (
@@ -96,12 +125,28 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => handleQuickLogin(acc)}
                     disabled={isLoading}
-                    className={`flex items-center space-x-2 p-2.5 rounded-lg border text-left transition hover:brightness-125 ${acc.color}`}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '10px 12px',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--color-hairline)',
+                      backgroundColor: 'var(--color-canvas-soft)',
+                      cursor: 'pointer', textAlign: 'left',
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = 'var(--color-primary-bg-subdued)'; el.style.backgroundColor = 'rgba(83,58,253,0.04)'; }}
+                    onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = 'var(--color-hairline)'; el.style.backgroundColor = 'var(--color-canvas-soft)'; }}
                   >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <div className="truncate">
-                      <div className="text-xs font-semibold text-white truncate">{acc.label}</div>
-                      <div className="text-[10px] opacity-80 truncate">{acc.role}</div>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                      backgroundColor: acc.accent + '18',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Icon size={14} color={acc.accent} strokeWidth={1.5} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 400, color: 'var(--color-ink)', lineHeight: 1.2 }}>{acc.label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--color-ink-mute)', lineHeight: 1.3 }}>{acc.role}</div>
                     </div>
                   </button>
                 );
@@ -109,63 +154,79 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-800"></div>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-slate-900 px-3 text-slate-500 font-medium">Or enter credentials</span>
-            </div>
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+            <hr className="divider" style={{ flex: 1 }} />
+            <span style={{ fontSize: 12, color: 'var(--color-ink-mute)', fontWeight: 400 }}>or sign in manually</span>
+            <hr className="divider" style={{ flex: 1 }} />
           </div>
 
+          {/* Error banner */}
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-rose-950/50 border border-rose-800/80 flex items-start space-x-2 text-rose-300 text-xs">
-              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-400" />
+            <div className="banner-error" style={{ marginBottom: 16 }}>
+              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
               <span>{error}</span>
             </div>
           )}
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          {/* Form */}
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">User ID or Email</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 400, color: 'var(--color-ink-secondary)', marginBottom: 6 }}>
+                User ID or Email
+              </label>
               <input
+                id="login-identifier"
                 type="text"
                 required
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 placeholder="e.g. USR-ADMIN-1 or admin@isms.com"
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                className="input"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Password</label>
-              <div className="relative">
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 400, color: 'var(--color-ink-secondary)', marginBottom: 6 }}>
+                Password
+              </label>
+              <div style={{ position: 'relative' }}>
                 <input
+                  id="login-password"
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  className="input"
+                  style={{ paddingRight: 40 }}
                 />
-                <Lock className="w-4 h-4 text-slate-600 absolute right-3 top-2.5" />
+                <Lock size={14} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-ink-mute)' }} />
               </div>
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-2 py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-emerald-500 disabled:opacity-50"
+              className="btn-primary"
+              style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? 'Signing in…' : (
+                <>
+                  Sign In
+                  <ArrowRight size={15} />
+                </>
+              )}
             </button>
           </form>
 
-          <div className="mt-4 text-center">
-            <span className="text-xs text-slate-500">
-              Demo passwords default to <code className="text-slate-400">Password123!</code>
-            </span>
+          <div style={{ marginTop: 16, textAlign: 'center', fontSize: 12, color: 'var(--color-ink-mute)' }}>
+            Demo password: <code style={{ fontWeight: 400, color: 'var(--color-ink-secondary)' }}>Password123!</code>
           </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 12, color: 'var(--color-ink-mute)' }}>
+          ISMS · Release 1.0 · SE Project — Stavan Desai & Dev Gaglani
         </div>
       </div>
     </div>

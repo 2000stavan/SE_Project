@@ -32,7 +32,8 @@ export default function VoiceCommandPage() {
   const [state, setState] = useState<VoiceResult['status']>('idle');
   const [currentResult, setCurrentResult] = useState<VoiceResult | null>(null);
   const [typedCommand, setTypedCommand] = useState('');
-  const confidence = 0.92;
+  // BUG FIX: was hardcoded to 0.92 — now tracks actual confidence from speech recognition event
+  const [confidence, setConfidence] = useState<number>(0.9);
   const [isRecording, setIsRecording] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [offlineQueue, setOfflineQueue] = useState<QueuedCommand[]>([]);
@@ -175,7 +176,9 @@ export default function VoiceCommandPage() {
       recognition.onresult = (event: any) => {
         setIsRecording(false);
         const transcript = event.results[0][0].transcript;
-        const conf = event.results[0][0].confidence || 0.95;
+        const conf = event.results[0][0].confidence || 0.9;
+        // BUG FIX: update state so the displayed confidence reflects the real value
+        setConfidence(conf);
         setTypedCommand(transcript);
         handleProcessTranscript(transcript, conf);
       };
@@ -211,206 +214,130 @@ export default function VoiceCommandPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div style={{ maxWidth: 800, margin: '0 auto' }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'space-between', gap:12, borderBottom:'1px solid var(--color-hairline)', paddingBottom:20, marginBottom:24 }}>
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center space-x-2">
-            <Mic className="w-6 h-6 text-emerald-400" />
-            <span>Voice Stock Command (C1.7 / Seq 1)</span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Hands-free inventory updates: Capture → Interpret → Spoken Read-back → Confirm
-          </p>
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
+            <Mic size={22} color="var(--color-primary)" strokeWidth={1.5} />
+            <span className="text-heading-lg" style={{ color:'var(--color-ink)' }}>Voice Stock Command</span>
+          </div>
+          <div style={{ fontSize:14, color:'var(--color-ink-mute)', fontWeight:300 }}>Hands-free inventory updates: Capture → Interpret → Spoken read-back → Confirm (C1.7)</div>
         </div>
-
-        <div className="flex items-center space-x-3 text-xs">
-          <button
-            onClick={() => setSpokenAudioEnabled(!spokenAudioEnabled)}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border transition ${
-              spokenAudioEnabled
-                ? 'bg-slate-900 border-slate-700 text-emerald-400'
-                : 'bg-slate-900 border-slate-800 text-slate-500'
-            }`}
-          >
-            <Volume2 className="w-3.5 h-3.5" />
-            <span>Audio Read-back {spokenAudioEnabled ? 'ON' : 'OFF'}</span>
-          </button>
-        </div>
+        <button onClick={() => setSpokenAudioEnabled(!spokenAudioEnabled)}
+          className="btn-ghost-sm" style={{ fontSize:13 }}>
+          <Volume2 size={14} style={{ color: spokenAudioEnabled ? 'var(--color-primary)' : 'var(--color-ink-mute)' }} />
+          Audio Read-back {spokenAudioEnabled ? 'ON' : 'OFF'}
+        </button>
       </div>
 
-      {/* Main Microphone Interaction Card */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-8 shadow-2xl text-center space-y-6">
-        {/* Status Indicator */}
-        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold bg-slate-950 border border-slate-800">
-          <span
-            className={`w-2 h-2 rounded-full ${
-              state === 'listening'
-                ? 'bg-rose-500 animate-ping'
-                : state === 'processing'
-                ? 'bg-amber-400 animate-pulse'
-                : state === 'needs_confirmation'
-                ? 'bg-blue-400'
-                : state === 'committed'
-                ? 'bg-emerald-400'
-                : 'bg-slate-600'
-            }`}
-          />
-          <span className="uppercase tracking-wider text-[11px] text-slate-300">
-            State: {state}
-          </span>
+      {/* Main Microphone Card */}
+      <div style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', padding:32, boxShadow:'var(--shadow-2)', textAlign:'center', marginBottom:20, display:'flex', flexDirection:'column', alignItems:'center', gap:20 }}>
+        {/* State badge */}
+        <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'4px 12px', borderRadius:'var(--radius-pill)', border:'1px solid var(--color-hairline)', backgroundColor:'var(--color-canvas-soft)', fontSize:11, fontWeight:300, color:'var(--color-ink-mute)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+          <span style={{ width:8, height:8, borderRadius:'50%', backgroundColor:
+            state==='listening' ? '#ef4444' :
+            state==='processing' ? '#f59e0b' :
+            state==='needs_confirmation' ? 'var(--color-primary)' :
+            state==='committed' ? '#16a34a' : 'var(--color-ink-mute)', display:'inline-block' }} />
+          State: {state}
         </div>
 
-        {/* Big Mic Button */}
-        <div>
-          <button
-            onClick={startListening}
-            disabled={isRecording}
-            className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto transition shadow-xl ${
-              isRecording
-                ? 'bg-rose-600 text-white animate-pulse shadow-rose-900/50'
-                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/40 hover:scale-105'
-            }`}
-          >
-            {isRecording ? <MicOff className="w-10 h-10" /> : <Mic className="w-10 h-10" />}
+        {/* Mic button */}
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+          <button onClick={startListening} disabled={isRecording}
+            style={{ width:88, height:88, borderRadius:'50%', border:'none', cursor: isRecording ? 'not-allowed' : 'pointer',
+              backgroundColor: isRecording ? '#dc2626' : 'var(--color-primary)',
+              color:'#fff', display:'flex', alignItems:'center', justifyContent:'center',
+              boxShadow: isRecording ? '0 0 0 4px rgba(220,38,38,0.2)' : '0 4px 20px rgba(83,58,253,0.35)',
+              transition:'all 0.2s', transform: isRecording ? 'scale(1.05)' : 'scale(1)' }}>
+            {isRecording ? <MicOff size={32} /> : <Mic size={32} />}
           </button>
-          <p className="text-xs text-slate-400 mt-3">
-            {isRecording ? 'Listening... Speak now' : 'Click to start speaking voice command'}
-          </p>
+          <div style={{ fontSize:13, color:'var(--color-ink-mute)', fontWeight:300 }}>
+            {isRecording ? 'Listening… speak now' : 'Click to start voice command'}
+          </div>
         </div>
 
-        {/* Confirmation State UI */}
+        {/* Confidence readout */}
+        <div style={{ fontSize:12, color:'var(--color-ink-mute)', display:'flex', alignItems:'center', gap:8 }}>
+          <span>Confidence:</span>
+          <div style={{ width:100, height:4, backgroundColor:'var(--color-hairline)', borderRadius:2, overflow:'hidden' }}>
+            <div style={{ width: `${Math.round(confidence*100)}%`, height:'100%', backgroundColor: confidence>0.8 ? '#16a34a' : confidence>0.6 ? '#f59e0b' : '#dc2626', borderRadius:2, transition:'width 0.3s' }} />
+          </div>
+          <span className="tnum" style={{ fontWeight:400, color:'var(--color-ink)' }}>{Math.round(confidence*100)}%</span>
+        </div>
+
+        {/* Needs Confirmation */}
         {state === 'needs_confirmation' && currentResult && (
-          <div className="max-w-md mx-auto p-4 rounded-xl bg-slate-950 border border-blue-900/60 text-left space-y-3">
-            <div className="flex items-center space-x-2 text-blue-400 font-bold text-xs uppercase tracking-wide">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>Confirmation Required (Seq 1 loop)</span>
+          <div style={{ maxWidth:480, width:'100%', padding:16, border:'1px solid rgba(83,58,253,0.4)', borderRadius:12, backgroundColor:'rgba(83,58,253,0.04)', textAlign:'left' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:6, color:'var(--color-primary)', fontSize:11, fontWeight:400, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:10 }}>
+              <AlertCircle size={14} /> Confirmation Required
             </div>
-            <p className="text-sm text-slate-200 italic font-serif">
-              "{currentResult.spokenText}"
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-xs bg-slate-900 p-2.5 rounded-lg font-mono">
-              <div>Action: <span className="text-emerald-400">{currentResult.action}</span></div>
-              <div>Qty: <span className="text-white">{currentResult.quantity}</span></div>
-              <div>SKU: <span className="text-white">{currentResult.sku}</span></div>
-              <div>Location: <span className="text-white">{currentResult.location}</span></div>
+            <p style={{ fontSize:15, color:'var(--color-ink)', fontStyle:'italic', marginBottom:12 }}>&#8220;{currentResult.spokenText}&#8221;</p>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14, fontSize:12, fontFamily:'monospace', backgroundColor:'var(--color-canvas-soft)', padding:'10px 12px', borderRadius:8, border:'1px solid var(--color-hairline)' }}>
+              <div>Action: <span style={{color:'var(--color-primary)'}}>{currentResult.action}</span></div>
+              <div className="tnum">Qty: <span style={{color:'var(--color-ink)',fontWeight:400}}>{currentResult.quantity}</span></div>
+              <div>SKU: <span style={{color:'var(--color-ink)',fontWeight:400}}>{currentResult.sku}</span></div>
+              <div>Location: <span style={{color:'var(--color-ink)',fontWeight:400}}>{currentResult.location}</span></div>
             </div>
-            <div className="flex space-x-2 pt-1">
-              <button
-                onClick={() => handleConfirm(true)}
-                className="flex-1 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition"
-              >
-                Confirm & Commit Stock
-              </button>
-              <button
-                onClick={() => handleConfirm(false)}
-                className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition"
-              >
-                Cancel
-              </button>
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => handleConfirm(true)} className="btn-primary" style={{ flex:1, justifyContent:'center' }}>Confirm & Commit Stock</button>
+              <button onClick={() => handleConfirm(false)} className="btn-ghost-sm" style={{ padding:'8px 16px' }}>Cancel</button>
             </div>
           </div>
         )}
 
-        {/* Committed State UI */}
+        {/* Committed */}
         {state === 'committed' && (
-          <div className="max-w-md mx-auto p-4 rounded-xl bg-emerald-950/40 border border-emerald-800 text-emerald-300 text-xs flex items-center justify-center space-x-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-            <span>Stock update committed and broadcast to WebSocket channel!</span>
+          <div style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 20px', border:'1px solid #bbf7d0', borderRadius:10, backgroundColor:'#f0fdf4', color:'#166534', fontSize:14 }}>
+            <CheckCircle2 size={18} /> Stock update committed and broadcast via WebSocket!
           </div>
         )}
 
-        {/* Low Confidence State UI */}
+        {/* Low Confidence */}
         {state === 'low_confidence' && (
-          <div className="max-w-md mx-auto p-4 rounded-xl bg-amber-950/40 border border-amber-800 text-amber-300 text-xs flex items-center justify-center space-x-2">
-            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
-            <span>Confidence below threshold (0.75). Please repeat or use the form below.</span>
+          <div style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 20px', border:'1px solid #fde68a', borderRadius:10, backgroundColor:'#fffbeb', color:'#92400e', fontSize:14 }}>
+            <AlertCircle size={18} /> Confidence below threshold (0.75). Please repeat or use the typed form below.
           </div>
         )}
       </div>
 
-      {/* Typed Command Fallback Box (CO-4) */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center space-x-1.5">
-            <span>Typed Command Fallback (CO-4)</span>
-            <span title="Grammar: add|remove|set|check <n> [units of] <sku> [to|from|in] [location] <loc>">
-              <HelpCircle className="w-3.5 h-3.5 text-slate-500" />
+      {/* Typed Command Fallback */}
+      <div style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', padding:20, boxShadow:'var(--shadow-1)', marginBottom:16 }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:13, fontWeight:400, color:'var(--color-ink)' }}>
+            <span>Typed Command Fallback</span>
+            <span title="Grammar: add|remove|set|check <n> [units of] <sku> [to|from|in] [location] <loc>" style={{color:'var(--color-ink-mute)',cursor:'help'}}>
+              <HelpCircle size={13} />
             </span>
-          </h3>
-          <span className="text-[10px] text-slate-500">Supports text input & offline queueing</span>
+          </div>
+          <span style={{ fontSize:11, color:'var(--color-ink-mute)', fontWeight:300 }}>Supports text input & offline queueing</span>
         </div>
-
-        <form
-          onSubmit={(e: FormEvent) => {
-            e.preventDefault();
-            handleProcessTranscript(typedCommand, confidence);
-          }}
-          className="flex gap-2"
-        >
-          <input
-            type="text"
-            value={typedCommand}
-            onChange={(e) => setTypedCommand(e.target.value)}
-            placeholder="e.g. add twenty units of SKU-1001 to location WH-01"
-            className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
-          />
-          <button
-            type="submit"
-            className="flex items-center space-x-1 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition"
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span>Process</span>
-          </button>
+        <form onSubmit={(e: FormEvent) => { e.preventDefault(); setConfidence(0.9); handleProcessTranscript(typedCommand, 0.9); }} style={{ display:'flex', gap:8, marginBottom:12 }}>
+          <input type="text" value={typedCommand} onChange={e => setTypedCommand(e.target.value)}
+            placeholder="e.g. add 20 units of SKU-1001 to location WH-01"
+            className="input" style={{ flex:1, fontSize:14, fontFamily:'monospace' }} />
+          <button type="submit" className="btn-primary-sm"><Send size={13} /> Process</button>
         </form>
-
-        <div className="flex items-center space-x-4 text-[11px] text-slate-500 pt-1">
-          <span>Grammar examples:</span>
-          <button
-            type="button"
-            onClick={() => setTypedCommand('add 20 units of SKU-1001 to location WH-01')}
-            className="text-emerald-400 hover:underline"
-          >
-            Add 20 SKU-1001
-          </button>
-          <button
-            type="button"
-            onClick={() => setTypedCommand('remove five units of SKU-1001 from location WH-01')}
-            className="text-emerald-400 hover:underline"
-          >
-            Remove 5 units
-          </button>
-          <button
-            type="button"
-            onClick={() => setTypedCommand('set 3 units of SKU-1001 in location WH-01')}
-            className="text-emerald-400 hover:underline"
-          >
-            Set 3 units (Low Stock Trigger)
-          </button>
+        <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:8, fontSize:12, color:'var(--color-ink-mute)' }}>
+          <span>Examples:</span>
+          {[{label:'Add 20 · SKU-1001',cmd:'add 20 units of SKU-1001 to location WH-01'},{label:'Remove 5 units',cmd:'remove five units of SKU-1001 from location WH-01'},{label:'Set 3 (low stock)',cmd:'set 3 units of SKU-1001 in location WH-01'}].map(ex=>(
+            <button key={ex.cmd} type="button" onClick={() => setTypedCommand(ex.cmd)} style={{ fontSize:12, color:'var(--color-primary)', background:'none', border:'none', cursor:'pointer', textDecoration:'underline', textDecorationStyle:'dotted' }}>{ex.label}</button>
+          ))}
         </div>
       </div>
 
-      {/* Offline Queue Section (Robustness-1) */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Clock className="w-5 h-5 text-slate-400" />
+      {/* Offline Queue */}
+      <div style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', padding:'14px 20px', boxShadow:'var(--shadow-1)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <Clock size={18} color="var(--color-ink-mute)" strokeWidth={1.5} />
           <div>
-            <div className="text-xs font-semibold text-white">
-              Offline Command Queue ({offlineQueue.length} pending)
-            </div>
-            <div className="text-[10px] text-slate-400">
-              Network status: <span className={isOnline ? 'text-emerald-400' : 'text-amber-400'}>{isOnline ? 'ONLINE' : 'OFFLINE'}</span> • Idempotent by client_id
-            </div>
+            <div style={{ fontSize:14, fontWeight:400, color:'var(--color-ink)' }}>Offline Queue ({offlineQueue.length} pending)</div>
+            <div style={{ fontSize:12, color:'var(--color-ink-mute)', fontWeight:300 }}>Network: <span style={{ color: isOnline ? '#16a34a' : '#f59e0b', fontWeight:400 }}>{isOnline ? 'ONLINE' : 'OFFLINE'}</span> · Idempotent by client_id</div>
           </div>
         </div>
-
         {offlineQueue.length > 0 && isOnline && (
-          <button
-            onClick={handleReplayQueue}
-            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition"
-          >
-            Replay Queue Now
-          </button>
+          <button onClick={handleReplayQueue} className="btn-primary-sm" style={{ fontSize:13 }}>Replay Queue</button>
         )}
       </div>
     </div>

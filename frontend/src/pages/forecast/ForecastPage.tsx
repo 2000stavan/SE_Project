@@ -190,164 +190,97 @@ export default function ForecastPage() {
     : forecasts;
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800 pb-5">
+      <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'space-between', gap:12, borderBottom:'1px solid var(--color-hairline)', paddingBottom:20, marginBottom:20 }}>
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
-            <TrendingUp className="w-6 h-6 text-emerald-400" />
-            Forecasting & Analytics
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            In-process Holt-Winters demand forecasting, seasonality detection, automated reorder suggestions, and analytics dashboards.
-          </p>
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
+            <TrendingUp size={22} color="var(--color-primary)" strokeWidth={1.5} />
+            <span className="text-heading-lg" style={{ color:'var(--color-ink)' }}>Forecasting &amp; Analytics</span>
+          </div>
+          <div style={{ fontSize:14, color:'var(--color-ink-mute)', fontWeight:300 }}>Holt-Winters demand forecasting, reorder automation, revenue &amp; stock analytics</div>
         </div>
-
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={handleRunForecast}
-            disabled={runningJob}
-            className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs px-3.5 py-2 rounded-lg shadow-lg shadow-emerald-950/40 transition disabled:opacity-50"
-          >
-            <Sparkles className={`w-3.5 h-3.5 ${runningJob ? 'animate-spin' : ''}`} />
-            {runningJob ? 'Computing Holt-Winters...' : 'Run Forecast Job'}
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <button onClick={handleRunForecast} disabled={runningJob} className="btn-primary" style={{ gap:6 }}>
+            <Sparkles size={13} style={{ animation: runningJob ? 'spin 1s linear infinite' : 'none' }} />
+            {runningJob ? 'Computing Holt-Winters…' : 'Run Forecast Job'}
           </button>
-
-          <button
-            onClick={loadAllData}
-            disabled={loading}
-            className="p-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-400 hover:text-white transition"
-            title="Refresh All Analytics"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <button onClick={loadAllData} disabled={loading} className="btn-ghost-sm" title="Refresh">
+            <RefreshCw size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
           </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-slate-900 border border-slate-800 rounded-xl p-1 text-xs font-medium w-full sm:w-auto self-start">
-        <button
-          onClick={() => setActiveTab('forecast')}
-          className={`flex-1 sm:flex-none px-4 py-2 rounded-lg transition ${
-            activeTab === 'forecast' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          Demand Forecasts
-        </button>
-        <button
-          onClick={() => setActiveTab('reorder')}
-          className={`flex-1 sm:flex-none px-4 py-2 rounded-lg transition flex items-center gap-1.5 ${
-            activeTab === 'reorder' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          Reorder Suggestions
-          {reorderSuggestions.length > 0 && (
-            <span className="bg-amber-500 text-slate-950 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
-              {reorderSuggestions.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('revenue')}
-          className={`flex-1 sm:flex-none px-4 py-2 rounded-lg transition ${
-            activeTab === 'revenue' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          Revenue Analytics
-        </button>
-        <button
-          onClick={() => setActiveTab('stock')}
-          className={`flex-1 sm:flex-none px-4 py-2 rounded-lg transition ${
-            activeTab === 'stock' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          Stock & Inventory Views
-        </button>
+      <div style={{ display:'flex', gap:4, backgroundColor:'var(--color-canvas-soft)', border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-pill)', padding:4, alignSelf:'flex-start', marginBottom:16 }}>
+        {([
+          { key:'forecast', label:'Demand Forecasts' },
+          { key:'reorder', label:`Reorder ${reorderSuggestions.length > 0 ? `(${reorderSuggestions.length})` : ''}` },
+          { key:'revenue', label:'Revenue Analytics' },
+          { key:'stock', label:'Stock Views' },
+        ] as const).map(t => (
+          <button key={t.key} onClick={() => setActiveTab(t.key as any)}
+            style={{ padding:'5px 14px', borderRadius:'var(--radius-pill)', fontSize:13, fontWeight: activeTab===t.key ? 400 : 300,
+              backgroundColor: activeTab===t.key ? 'var(--color-primary)' : 'transparent',
+              color: activeTab===t.key ? '#fff' : 'var(--color-ink-mute)',
+              border:'none', cursor:'pointer', transition:'all 0.15s' }}>
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {/* Notifications */}
+      {/* Banners */}
       {errorMsg && (
-        <div className="p-3 bg-rose-950/40 border border-rose-800/60 rounded-xl text-xs text-rose-300 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
-          <span>{errorMsg}</span>
+        <div className="banner-error" style={{ marginBottom:16 }}>
+          <AlertTriangle size={14} style={{ flexShrink:0 }} />
+          <span style={{ flex:1 }}>{errorMsg}</span>
+          <button onClick={() => setErrorMsg(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'inherit' }}>✕</button>
         </div>
       )}
       {successMsg && (
-        <div className="p-3 bg-emerald-950/40 border border-emerald-800/60 rounded-xl text-xs text-emerald-300 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-          <span>{successMsg}</span>
+        <div className="banner-success" style={{ marginBottom:16 }}>
+          <CheckCircle2 size={14} style={{ flexShrink:0 }} />
+          <span style={{ flex:1 }}>{successMsg}</span>
+          <button onClick={() => setSuccessMsg(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'inherit' }}>✕</button>
         </div>
       )}
 
       {/* TAB 1: DEMAND FORECASTS */}
       {activeTab === 'forecast' && (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+          <div style={{ display:'flex', flexWrap:'wrap', justifyContent:'space-between', alignItems:'center', gap:12 }}>
             <div>
-              <h2 className="text-sm font-bold text-white">Demand Forecast Predictions</h2>
-              <p className="text-xs text-slate-400">
-                Calculated via Holt-Winters Additive smoothing (α=0.2, β=0.1, γ=0.2) with seasonal-naive fallback.
-              </p>
+              <div style={{ fontSize:15, fontWeight:400, color:'var(--color-ink)', marginBottom:3 }}>Demand Forecast Predictions</div>
+              <div style={{ fontSize:13, color:'var(--color-ink-mute)', fontWeight:300 }}>Holt-Winters Additive (α=0.2, β=0.1, γ=0.2) with seasonal-naive fallback</div>
             </div>
-            <div className="w-full sm:w-64">
-              <input
-                type="text"
-                placeholder="Filter by SKU ID..."
-                value={selectedSku}
-                onChange={(e) => setSelectedSku(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-              />
-            </div>
+            <input type="text" placeholder="Filter by SKU ID…" value={selectedSku}
+              onChange={e => setSelectedSku(e.target.value)}
+              className="input" style={{ width:220, fontSize:13, fontFamily:'monospace' }} />
           </div>
-
-          <div className="bg-slate-900/40 border border-slate-800 rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950/60 text-slate-400 uppercase text-[10px] border-b border-slate-800">
-                  <tr>
-                    <th className="py-3 px-4">SKU ID</th>
-                    <th className="py-3 px-4">Location</th>
-                    <th className="py-3 px-4">Forecast Period</th>
-                    <th className="py-3 px-4 text-right">Predicted Demand</th>
-                    <th className="py-3 px-4 text-right">Recommended Reorder</th>
-                    <th className="py-3 px-4 text-center">Seasonality Cycle</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
+          <div style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', overflow:'hidden', boxShadow:'var(--shadow-1)' }}>
+            <div style={{ overflowX:'auto' }}>
+              <table className="data-table">
+                <thead><tr>
+                  <th>SKU ID</th><th>Location</th><th>Forecast Period</th>
+                  <th style={{textAlign:'right'}}>Predicted Demand</th>
+                  <th style={{textAlign:'right'}}>Rec. Reorder</th>
+                  <th style={{textAlign:'center'}}>Cycle</th>
+                </tr></thead>
+                <tbody>
                   {filteredForecasts.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-500 text-xs">
-                        No forecast records found. Click &quot;Run Forecast Job&quot; to compute demand.
-                      </td>
+                    <tr><td colSpan={6} style={{ textAlign:'center', color:'var(--color-ink-mute)', padding:40 }}>
+                      No forecast records. Click &ldquo;Run Forecast Job&rdquo; to compute demand.
+                    </td></tr>
+                  ) : filteredForecasts.map(f => (
+                    <tr key={`${f.sku_id}-${f.location_id}-${f.forecast_period}`}>
+                      <td><span className="tnum" style={{ fontFamily:'monospace', color:'var(--color-primary)', fontWeight:400 }}>{f.sku_id}</span></td>
+                      <td><span className="pill-tag pill-neutral" style={{fontSize:9}}>{f.location_id}</span></td>
+                      <td><span className="tnum" style={{ fontSize:13, color:'var(--color-ink-mute)', fontFamily:'monospace' }}>{f.forecast_period}</span></td>
+                      <td style={{textAlign:'right'}}><span className="tnum" style={{ fontWeight:400, color:'var(--color-ink)' }}>{f.predicted_demand} <span style={{color:'var(--color-ink-mute)',fontSize:11}}>units/wk</span></span></td>
+                      <td style={{textAlign:'right'}}><span className="tnum" style={{ fontWeight:400, color:'#92400e' }}>{f.recommended_reorder_qty} <span style={{color:'var(--color-ink-mute)',fontSize:11}}>units</span></span></td>
+                      <td style={{textAlign:'center'}}><span className="pill-tag" style={{fontSize:9,backgroundColor:'#ecfdf5',color:'#065f46',borderColor:'#bbf7d0'}}>Weekly 7d</span></td>
                     </tr>
-                  ) : (
-                    filteredForecasts.map((f) => (
-                      <tr key={`${f.sku_id}-${f.location_id}-${f.forecast_period}`} className="hover:bg-slate-800/30">
-                        <td className="py-3 px-4 font-mono font-medium text-emerald-400">
-                          {f.sku_id}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700/60">
-                            {f.location_id}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 font-mono text-slate-300">
-                          {f.forecast_period}
-                        </td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-white">
-                          {f.predicted_demand} units/wk
-                        </td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-amber-400">
-                          {f.recommended_reorder_qty} units
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-950/50 text-teal-400 border border-teal-800/50">
-                            Weekly (7-Day Cycle)
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -355,171 +288,109 @@ export default function ForecastPage() {
         </div>
       )}
 
-      {/* TAB 2: REORDER SUGGESTIONS (E1.4) */}
+      {/* TAB 2: REORDER SUGGESTIONS */}
       {activeTab === 'reorder' && (
-        <div className="space-y-4">
+        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
           <div>
-            <h2 className="text-sm font-bold text-white">Automated Reorder Suggestions (1-Click PO Draft)</h2>
-            <p className="text-xs text-slate-400">
-              SKUs at or near reorder thresholds. Click &quot;Create Draft PO&quot; to automatically generate a pre-filled Purchase Order.
-            </p>
+            <div style={{ fontSize:15, fontWeight:400, color:'var(--color-ink)', marginBottom:3 }}>Automated Reorder Suggestions</div>
+            <div style={{ fontSize:13, color:'var(--color-ink-mute)', fontWeight:300 }}>SKUs at or near reorder thresholds. Click &ldquo;Create Draft PO&rdquo; to auto-generate a pre-filled Purchase Order.</div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:16 }}>
             {reorderSuggestions.length === 0 ? (
-              <div className="col-span-full py-12 text-center border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs">
+              <div style={{ gridColumn:'1/-1', padding:48, textAlign:'center', border:'1px dashed var(--color-hairline)', borderRadius:'var(--radius-lg)', color:'var(--color-ink-mute)', fontSize:14 }}>
                 No items currently require reordering. All stock levels are healthy!
               </div>
-            ) : (
-              reorderSuggestions.map((item) => (
-                <div
-                  key={`${item.sku_id}-${item.location_id}`}
-                  className="bg-slate-900/50 border border-slate-800 hover:border-slate-700 rounded-xl p-4 flex flex-col justify-between space-y-4 transition"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-emerald-400">{item.sku_id}</span>
-                      <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700/60">
-                        {item.location_id}
-                      </span>
+            ) : reorderSuggestions.map(item => (
+              <div key={`${item.sku_id}-${item.location_id}`}
+                style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', padding:18, boxShadow:'var(--shadow-1)', display:'flex', flexDirection:'column', gap:14, backgroundColor:'var(--color-canvas-soft)' }}>
+                <div>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+                    <span className="tnum" style={{ fontFamily:'monospace', fontSize:13, color:'var(--color-primary)', fontWeight:400 }}>{item.sku_id}</span>
+                    <span className="pill-tag pill-neutral" style={{fontSize:9}}>{item.location_id}</span>
+                  </div>
+                  <div style={{ fontSize:14, fontWeight:400, color:'var(--color-ink)', marginBottom:12 }}>{item.product_name}</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, paddingTop:12, borderTop:'1px solid var(--color-hairline)', fontSize:12 }}>
+                    <div>
+                      <div style={{ color:'var(--color-ink-mute)', fontSize:11, marginBottom:2 }}>On Hand</div>
+                      <div className="tnum" style={{ fontWeight:400, color:'#b91c1c', fontSize:16 }}>{item.quantity_on_hand}</div>
                     </div>
-                    <div className="text-xs font-semibold text-white">{item.product_name}</div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 text-[11px]">
-                      <div>
-                        <span className="text-slate-500 block">On Hand</span>
-                        <span className="font-mono font-bold text-rose-400">{item.quantity_on_hand}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block">Reorder Point</span>
-                        <span className="font-mono font-bold text-slate-300">{item.reorder_point}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block">Weekly Demand</span>
-                        <span className="font-mono font-bold text-slate-300">{item.predicted_demand}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block">Suggested PO</span>
-                        <span className="font-mono font-bold text-amber-400">+{item.suggested_order_qty} units</span>
-                      </div>
+                    <div>
+                      <div style={{ color:'var(--color-ink-mute)', fontSize:11, marginBottom:2 }}>Reorder Point</div>
+                      <div className="tnum" style={{ fontWeight:400, color:'var(--color-ink)', fontSize:16 }}>{item.reorder_point}</div>
+                    </div>
+                    <div>
+                      <div style={{ color:'var(--color-ink-mute)', fontSize:11, marginBottom:2 }}>Weekly Demand</div>
+                      <div className="tnum" style={{ fontWeight:400, color:'var(--color-ink-secondary)', fontSize:14 }}>{item.predicted_demand}</div>
+                    </div>
+                    <div>
+                      <div style={{ color:'var(--color-ink-mute)', fontSize:11, marginBottom:2 }}>Suggested PO</div>
+                      <div className="tnum" style={{ fontWeight:400, color:'#92400e', fontSize:14 }}>+{item.suggested_order_qty} units</div>
                     </div>
                   </div>
-
-                  <button
-                    onClick={() => handleCreatePoDraft(item)}
-                    disabled={creatingPoSku === item.sku_id}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-2 rounded-lg transition flex items-center justify-center gap-1.5 disabled:opacity-50"
-                  >
-                    <ShoppingCart className="w-3.5 h-3.5" />
-                    {creatingPoSku === item.sku_id ? 'Creating Draft PO...' : 'Create Draft PO'}
-                  </button>
                 </div>
-              ))
-            )}
+                <button onClick={() => handleCreatePoDraft(item)} disabled={creatingPoSku === item.sku_id}
+                  className="btn-primary" style={{ width:'100%', justifyContent:'center', opacity: creatingPoSku===item.sku_id ? 0.6 : 1 }}>
+                  <ShoppingCart size={12} />
+                  {creatingPoSku === item.sku_id ? 'Creating Draft PO…' : 'Create Draft PO'}
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
       {/* TAB 3: REVENUE ANALYTICS */}
       {activeTab === 'revenue' && revenueData && (
-        <div className="space-y-6">
-          {/* Revenue Top Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/50">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs text-slate-400 font-medium">Total Gross Revenue</span>
-                <DollarSign className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div className="text-2xl font-bold font-mono text-white">
-                ${Number(revenueData.total_revenue).toFixed(2)}
-              </div>
-              <p className="text-[10px] text-slate-500 mt-1">Completed & confirmed orders</p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/50">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs text-slate-400 font-medium">Completed Orders</span>
-                <Package className="w-4 h-4 text-blue-400" />
-              </div>
-              <div className="text-2xl font-bold font-mono text-white">
-                {revenueData.total_orders}
-              </div>
-              <p className="text-[10px] text-slate-500 mt-1">Physical POS & Marketplace sales</p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/50">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs text-slate-400 font-medium">Average Order Value</span>
-                <BarChart3 className="w-4 h-4 text-teal-400" />
-              </div>
-              <div className="text-2xl font-bold font-mono text-white">
-                ${Number(revenueData.average_order_value).toFixed(2)}
-              </div>
-              <p className="text-[10px] text-slate-500 mt-1">Per completed order</p>
-            </div>
-          </div>
-
-          {/* Group-by Switcher & Breakdown */}
-          <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-white">Revenue Breakdown</h3>
-              <div className="flex bg-slate-950 border border-slate-800 rounded-lg p-0.5 text-xs">
-                <button
-                  onClick={() => setRevenueGroupBy('channel')}
-                  className={`px-3 py-1 rounded transition ${
-                    revenueGroupBy === 'channel' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400'
-                  }`}
-                >
-                  By Channel
-                </button>
-                <button
-                  onClick={() => setRevenueGroupBy('location')}
-                  className={`px-3 py-1 rounded transition ${
-                    revenueGroupBy === 'location' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400'
-                  }`}
-                >
-                  By Location
-                </button>
-                <button
-                  onClick={() => setRevenueGroupBy('period')}
-                  className={`px-3 py-1 rounded transition ${
-                    revenueGroupBy === 'period' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400'
-                  }`}
-                >
-                  By Date
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {revenueData.breakdown.length === 0 ? (
-                <div className="py-8 text-center text-slate-500 text-xs">
-                  No revenue data found for this grouping. Complete a sale or simulate orders to see metrics.
+        <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+          {/* Stat cards */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:16 }}>
+            {[
+              { label:'Total Gross Revenue', value:`₹${Number(revenueData.total_revenue).toFixed(2)}`, icon:<DollarSign size={16} color="var(--color-primary)" strokeWidth={1.5}/>, note:'Completed & confirmed orders' },
+              { label:'Completed Orders', value:String(revenueData.total_orders), icon:<Package size={16} color="var(--color-primary)" strokeWidth={1.5}/>, note:'Physical POS & Marketplace' },
+              { label:'Avg Order Value', value:`₹${Number(revenueData.average_order_value).toFixed(2)}`, icon:<BarChart3 size={16} color="var(--color-primary)" strokeWidth={1.5}/>, note:'Per completed order' },
+            ].map(card => (
+              <div key={card.label} style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', padding:18, boxShadow:'var(--shadow-1)', backgroundColor:'var(--color-canvas-soft)' }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+                  <span style={{ fontSize:12, color:'var(--color-ink-mute)', fontWeight:300 }}>{card.label}</span>
+                  {card.icon}
                 </div>
-              ) : (
-                revenueData.breakdown.map((item) => {
-                  const pct = revenueData.total_revenue > 0
-                    ? Math.round((Number(item.revenue) / Number(revenueData.total_revenue)) * 100)
-                    : 0;
-
-                  return (
-                    <div key={item.group} className="space-y-1.5">
-                      <div className="flex justify-between text-xs">
-                        <span className="font-semibold text-white">{item.group}</span>
-                        <span className="text-slate-300 font-mono">
-                          ${Number(item.revenue).toFixed(2)} ({item.order_count} orders • {pct}%)
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
-                        <div
-                          className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${Math.max(4, pct)}%` }}
-                        />
-                      </div>
+                <div className="tnum" style={{ fontSize:24, fontWeight:400, color:'var(--color-ink)', letterSpacing:'-0.02em', marginBottom:4 }}>{card.value}</div>
+                <div style={{ fontSize:11, color:'var(--color-ink-mute)', fontWeight:300 }}>{card.note}</div>
+              </div>
+            ))}
+          </div>
+          {/* Breakdown */}
+          <div style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', padding:20, boxShadow:'var(--shadow-1)' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16, paddingBottom:14, borderBottom:'1px solid var(--color-hairline)' }}>
+              <span style={{ fontSize:15, fontWeight:400, color:'var(--color-ink)' }}>Revenue Breakdown</span>
+              <div style={{ display:'flex', gap:4, backgroundColor:'var(--color-canvas-soft)', border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-pill)', padding:3 }}>
+                {(['channel','location','period'] as const).map(g => (
+                  <button key={g} onClick={() => setRevenueGroupBy(g)}
+                    style={{ padding:'4px 12px', borderRadius:'var(--radius-pill)', fontSize:12, border:'none', cursor:'pointer', transition:'all 0.15s',
+                      backgroundColor: revenueGroupBy===g ? 'var(--color-primary)' : 'transparent',
+                      color: revenueGroupBy===g ? '#fff' : 'var(--color-ink-mute)', fontWeight: revenueGroupBy===g ? 400 : 300 }}>
+                    {g==='channel'?'By Channel':g==='location'?'By Location':'By Date'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              {revenueData.breakdown.length === 0 ? (
+                <div style={{ textAlign:'center', padding:32, color:'var(--color-ink-mute)', fontSize:13 }}>No revenue data for this grouping. Complete a sale or simulate orders.</div>
+              ) : revenueData.breakdown.map(item => {
+                const pct = revenueData.total_revenue > 0 ? Math.round((Number(item.revenue)/Number(revenueData.total_revenue))*100) : 0;
+                return (
+                  <div key={item.group}>
+                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:6 }}>
+                      <span style={{ fontWeight:400, color:'var(--color-ink)' }}>{item.group}</span>
+                      <span className="tnum" style={{ color:'var(--color-ink-mute)' }}>₹{Number(item.revenue).toFixed(2)} &middot; {item.order_count} orders &middot; {pct}%</span>
                     </div>
-                  );
-                })
-              )}
+                    <div style={{ width:'100%', height:6, backgroundColor:'var(--color-hairline)', borderRadius:3, overflow:'hidden' }}>
+                      <div style={{ width:`${Math.max(3,pct)}%`, height:'100%', backgroundColor:'var(--color-primary)', borderRadius:3, transition:'width 0.4s ease' }} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -527,95 +398,62 @@ export default function ForecastPage() {
 
       {/* TAB 4: STOCK ANALYTICS */}
       {activeTab === 'stock' && stockData && (
-        <div className="space-y-6">
-          {/* Stock Stat Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <div className="p-3 rounded-xl border border-slate-800 bg-slate-900/50">
-              <div className="text-[11px] text-slate-400 font-medium">Total Products</div>
-              <div className="text-xl font-bold font-mono text-white mt-1">{stockData.total_products}</div>
-            </div>
-
-            <div className="p-3 rounded-xl border border-slate-800 bg-slate-900/50">
-              <div className="text-[11px] text-slate-400 font-medium">Total Units</div>
-              <div className="text-xl font-bold font-mono text-white mt-1">{stockData.total_units_on_hand}</div>
-            </div>
-
-            <div className="p-3 rounded-xl border border-slate-800 bg-slate-900/50">
-              <div className="text-[11px] text-slate-400 font-medium">Inventory Valuation</div>
-              <div className="text-xl font-bold font-mono text-emerald-400 mt-1">
-                ${Number(stockData.total_inventory_valuation).toFixed(2)}
+        <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+          {/* Stat pills */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:12 }}>
+            {[
+              { label:'Products', value:stockData.total_products, color:'var(--color-ink)' },
+              { label:'Total Units', value:stockData.total_units_on_hand, color:'var(--color-ink)' },
+              { label:'Valuation', value:`₹${Number(stockData.total_inventory_valuation).toFixed(0)}`, color:'var(--color-primary)' },
+              { label:'Low Stock', value:stockData.low_stock_count, color:'#92400e' },
+              { label:'Out of Stock', value:stockData.out_of_stock_count, color:'#b91c1c' },
+              { label:'Overstock', value:stockData.overstock_count, color:'var(--color-primary)' },
+            ].map(c => (
+              <div key={c.label} style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', padding:'14px 16px', boxShadow:'var(--shadow-1)', backgroundColor:'var(--color-canvas-soft)' }}>
+                <div style={{ fontSize:11, color:'var(--color-ink-mute)', marginBottom:6, fontWeight:300 }}>{c.label}</div>
+                <div className="tnum" style={{ fontSize:22, fontWeight:400, color:c.color }}>{c.value}</div>
               </div>
-            </div>
-
-            <div className="p-3 rounded-xl border border-slate-800 bg-slate-900/50">
-              <div className="text-[11px] text-slate-400 font-medium">Low Stock</div>
-              <div className="text-xl font-bold font-mono text-amber-400 mt-1">{stockData.low_stock_count}</div>
-            </div>
-
-            <div className="p-3 rounded-xl border border-slate-800 bg-slate-900/50">
-              <div className="text-[11px] text-slate-400 font-medium">Out of Stock</div>
-              <div className="text-xl font-bold font-mono text-rose-400 mt-1">{stockData.out_of_stock_count}</div>
-            </div>
-
-            <div className="p-3 rounded-xl border border-slate-800 bg-slate-900/50">
-              <div className="text-[11px] text-slate-400 font-medium">Overstock</div>
-              <div className="text-xl font-bold font-mono text-blue-400 mt-1">{stockData.overstock_count}</div>
-            </div>
+            ))}
           </div>
-
-          {/* Low Stock Items */}
-          <div className="bg-slate-900/40 border border-slate-800 rounded-xl overflow-hidden">
-            <div className="p-3.5 border-b border-slate-800 bg-slate-900/80 flex items-center justify-between">
-              <h3 className="text-xs font-bold text-white flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
-                Low Stock Alerts ({stockData.low_stock_items.length})
-              </h3>
-              <span className="text-[10px] text-slate-400">Stock &le; Reorder Point</span>
+          {/* Low stock table */}
+          <div style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', overflow:'hidden', boxShadow:'var(--shadow-1)' }}>
+            <div style={{ padding:'10px 16px', borderBottom:'1px solid var(--color-hairline)', backgroundColor:'var(--color-canvas-soft)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:14, fontWeight:400, color:'var(--color-ink)' }}>
+                <AlertTriangle size={14} color="#92400e" /> Low Stock Alerts ({stockData.low_stock_items.length})
+              </div>
+              <span style={{ fontSize:11, color:'var(--color-ink-mute)' }}>Stock &le; Reorder Point</span>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950/60 text-slate-400 uppercase text-[10px] border-b border-slate-800">
-                  <tr>
-                    <th className="py-2.5 px-4">Product / SKU</th>
-                    <th className="py-2.5 px-4">Location</th>
-                    <th className="py-2.5 px-4 text-center">On Hand</th>
-                    <th className="py-2.5 px-4 text-center">Threshold</th>
-                    <th className="py-2.5 px-4 text-right">Unit Price</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
+            <div style={{ overflowX:'auto' }}>
+              <table className="data-table">
+                <thead><tr>
+                  <th>Product / SKU</th><th>Location</th>
+                  <th style={{textAlign:'center'}}>On Hand</th>
+                  <th style={{textAlign:'center'}}>Threshold</th>
+                  <th style={{textAlign:'right'}}>Unit Price</th>
+                </tr></thead>
+                <tbody>
                   {stockData.low_stock_items.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-6 text-center text-slate-500 text-xs">
-                        No low-stock alerts. Inventory is well-balanced.
+                    <tr><td colSpan={5} style={{ textAlign:'center', color:'var(--color-ink-mute)', padding:32 }}>No low-stock alerts. Inventory is healthy.</td></tr>
+                  ) : stockData.low_stock_items.map(item => (
+                    <tr key={`${item.sku_id}-${item.location_id}`}>
+                      <td>
+                        <div style={{ fontWeight:400, color:'var(--color-ink)' }}>{item.name}</div>
+                        <div style={{ fontSize:11, fontFamily:'monospace', color:'var(--color-primary)' }}>{item.sku_id}</div>
                       </td>
+                      <td><span className="pill-tag pill-neutral" style={{fontSize:9}}>{item.location_id}</span></td>
+                      <td style={{textAlign:'center'}}><span className="tnum" style={{ fontWeight:400, color:'#b91c1c', fontSize:15 }}>{item.quantity_on_hand}</span></td>
+                      <td style={{textAlign:'center'}}><span className="tnum" style={{ color:'var(--color-ink-mute)' }}>{item.reorder_point}</span></td>
+                      <td style={{textAlign:'right'}}><span className="tnum" style={{ color:'var(--color-ink)', fontWeight:400 }}>₹{Number(item.unit_price).toFixed(2)}</span></td>
                     </tr>
-                  ) : (
-                    stockData.low_stock_items.map((item) => (
-                      <tr key={`${item.sku_id}-${item.location_id}`} className="hover:bg-slate-800/30">
-                        <td className="py-2.5 px-4">
-                          <div className="font-semibold text-white">{item.name}</div>
-                          <div className="text-[10px] font-mono text-emerald-400">{item.sku_id}</div>
-                        </td>
-                        <td className="py-2.5 px-4 text-slate-300">{item.location_id}</td>
-                        <td className="py-2.5 px-4 text-center font-mono font-bold text-rose-400">
-                          {item.quantity_on_hand}
-                        </td>
-                        <td className="py-2.5 px-4 text-center font-mono text-slate-400">
-                          {item.reorder_point}
-                        </td>
-                        <td className="py-2.5 px-4 text-right font-mono text-white">
-                          ${Number(item.unit_price).toFixed(2)}
-                        </td>
-                      </tr>
-                    ))
-                  )}
+                  ))}
                 </tbody>
               </table>
             </div>
           </div>
         </div>
       )}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
+

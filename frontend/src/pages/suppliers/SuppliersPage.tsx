@@ -1,20 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiRequest } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import {
-  Building2,
-  Plus,
-  Search,
-  Star,
-  Clock,
-  Mail,
-  Edit2,
-  PowerOff,
-  History,
-  X,
-  AlertCircle,
-  CheckCircle2,
-} from 'lucide-react';
+import { Building2, Plus, Search, Star, Clock, Mail, Edit2, PowerOff, History, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface Supplier {
   supplierId: string;
@@ -26,6 +13,12 @@ interface Supplier {
   isActive: boolean;
 }
 
+const pageHeaderStyle: React.CSSProperties = {
+  display: 'flex', flexWrap: 'wrap', alignItems: 'center',
+  justifyContent: 'space-between', gap: 12,
+  borderBottom: '1px solid var(--color-hairline)', paddingBottom: 20, marginBottom: 24,
+};
+
 export default function SuppliersPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'Administrator';
@@ -36,17 +29,20 @@ export default function SuppliersPage() {
   const [minRating, setMinRating] = useState<number | ''>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [historySupplier, setHistorySupplier] = useState<Supplier | null>(null);
 
-  // Form states
   const [name, setName] = useState('');
   const [contactDetails, setContactDetails] = useState('');
   const [leadTime, setLeadTime] = useState(7);
   const [rating, setRating] = useState(4.0);
+
+  // Debounced fetch — 300ms delay on search
+  useEffect(() => {
+    const timer = setTimeout(() => fetchSuppliers(), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, minRating]);
 
   const fetchSuppliers = async () => {
     setLoading(true);
@@ -56,7 +52,6 @@ export default function SuppliersPage() {
       if (searchQuery.trim()) params.append('q', searchQuery.trim());
       if (minRating !== '') params.append('min_rating', minRating.toString());
       if (params.toString()) url += `?${params.toString()}`;
-
       const data = await apiRequest<Supplier[]>(url);
       setSuppliers(data);
     } catch (err) {
@@ -66,31 +61,16 @@ export default function SuppliersPage() {
     }
   };
 
-  useEffect(() => {
-    fetchSuppliers();
-  }, [searchQuery, minRating]);
-
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     try {
-      await apiRequest('/api/v1/suppliers', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: name.trim(),
-          contactDetails: contactDetails.trim(),
-          leadTime: Number(leadTime),
-          rating: Number(rating),
-          isActive: true,
-        }),
-      });
+      await apiRequest('/api/v1/suppliers', { method: 'POST', body: JSON.stringify({ name: name.trim(), contactDetails: contactDetails.trim(), leadTime: Number(leadTime), rating: Number(rating), isActive: true }) });
       setSuccessMsg('Supplier registered successfully');
       setShowAddModal(false);
       resetForm();
       fetchSuppliers();
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to create supplier');
-    }
+    } catch (err) { setErrorMsg(err instanceof Error ? err.message : 'Failed to create supplier'); }
   };
 
   const handleEdit = async (e: React.FormEvent) => {
@@ -98,36 +78,22 @@ export default function SuppliersPage() {
     if (!editingSupplier) return;
     setErrorMsg(null);
     try {
-      await apiRequest(`/api/v1/suppliers/${editingSupplier.supplierId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          name: name.trim(),
-          contactDetails: contactDetails.trim(),
-          leadTime: Number(leadTime),
-          rating: Number(rating),
-        }),
-      });
-      setSuccessMsg('Supplier updated successfully');
+      await apiRequest(`/api/v1/suppliers/${editingSupplier.supplierId}`, { method: 'PATCH', body: JSON.stringify({ name: name.trim(), contactDetails: contactDetails.trim(), leadTime: Number(leadTime), rating: Number(rating) }) });
+      setSuccessMsg('Supplier updated');
       setEditingSupplier(null);
       resetForm();
       fetchSuppliers();
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to update supplier');
-    }
+    } catch (err) { setErrorMsg(err instanceof Error ? err.message : 'Failed to update supplier'); }
   };
 
   const handleDeactivate = async (supplierId: string) => {
-    if (!window.confirm('Are you sure you want to deactivate this supplier? (BR-5 applies)')) return;
+    if (!window.confirm('Deactivate supplier? (BR-5 safeguard applies — blocked if open POs exist)')) return;
     setErrorMsg(null);
     try {
-      await apiRequest(`/api/v1/suppliers/${supplierId}/deactivate`, {
-        method: 'POST',
-      });
-      setSuccessMsg('Supplier deactivated successfully');
+      await apiRequest(`/api/v1/suppliers/${supplierId}/deactivate`, { method: 'POST' });
+      setSuccessMsg('Supplier deactivated');
       fetchSuppliers();
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Cannot deactivate supplier (open POs exist)');
-    }
+    } catch (err) { setErrorMsg(err instanceof Error ? err.message : 'Cannot deactivate — open POs exist'); }
   };
 
   const openEditModal = (sup: Supplier) => {
@@ -138,180 +104,118 @@ export default function SuppliersPage() {
     setRating(sup.rating);
   };
 
-  const resetForm = () => {
-    setName('');
-    setContactDetails('');
-    setLeadTime(7);
-    setRating(4.0);
+  const resetForm = () => { setName(''); setContactDetails(''); setLeadTime(7); setRating(4.0); };
+
+  const starRating = (r: number) => {
+    const filled = Math.round(r);
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star key={i} size={11} strokeWidth={0} fill={i < filled ? '#f59e0b' : '#e3e8ee'} />
+    ));
   };
 
   return (
-    <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800 pb-5">
+    <div>
+      {/* Header */}
+      <div style={pageHeaderStyle}>
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
-            <Building2 className="w-6 h-6 text-emerald-400" />
-            Supplier Directory & Performance
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Vendor management, procurement tracking, rating indices, and lead times (C2)
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <Building2 size={22} color="var(--color-primary)" strokeWidth={1.5} />
+            <span className="text-heading-lg" style={{ color: 'var(--color-ink)' }}>Supplier Directory</span>
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--color-ink-mute)', fontWeight: 300 }}>
+            Vendor management, ratings, lead times & procurement history (C2)
+          </div>
         </div>
-        <button
-          onClick={() => {
-            resetForm();
-            setShowAddModal(true);
-          }}
-          className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-sm transition"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Supplier</span>
+        <button onClick={() => { resetForm(); setShowAddModal(true); }} className="btn-primary-sm">
+          <Plus size={13} /> New Supplier
         </button>
       </div>
 
       {/* Messages */}
       {errorMsg && (
-        <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{errorMsg}</span>
-          </div>
-          <button onClick={() => setErrorMsg(null)} className="hover:text-white">
-            <X className="w-3.5 h-3.5" />
-          </button>
+        <div className="banner-error" style={{ marginBottom: 16 }}>
+          <AlertCircle size={15} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1 }}>{errorMsg}</span>
+          <button onClick={() => setErrorMsg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}><X size={13} /></button>
         </div>
       )}
-
       {successMsg && (
-        <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 text-xs flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{successMsg}</span>
-          </div>
-          <button onClick={() => setSuccessMsg(null)} className="hover:text-white">
-            <X className="w-3.5 h-3.5" />
-          </button>
+        <div className="banner-success" style={{ marginBottom: 16 }}>
+          <CheckCircle2 size={15} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1 }}>{successMsg}</span>
+          <button onClick={() => setSuccessMsg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}><X size={13} /></button>
         </div>
       )}
 
       {/* Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="relative sm:col-span-2">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-          <input
-            type="text"
-            placeholder="Search suppliers by name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-          />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+        <div style={{ position: 'relative', flex: '1 1 260px' }}>
+          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-ink-mute)' }} />
+          <input className="input" style={{ paddingLeft: 32, fontSize: 14 }} type="text" placeholder="Search suppliers by name…" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
         </div>
-        <div>
-          <select
-            value={minRating}
-            onChange={(e) => setMinRating(e.target.value === '' ? '' : Number(e.target.value))}
-            className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-          >
-            <option value="">All Ratings</option>
-            <option value="4.5">Rating ≥ 4.5 Stars</option>
-            <option value="4.0">Rating ≥ 4.0 Stars</option>
-            <option value="3.0">Rating ≥ 3.0 Stars</option>
-            <option value="2.0">Rating ≥ 2.0 Stars</option>
-          </select>
-        </div>
+        <select className="input" style={{ flex: '0 1 180px', fontSize: 14 }} value={minRating} onChange={e => setMinRating(e.target.value === '' ? '' : Number(e.target.value))}>
+          <option value="">All Ratings</option>
+          <option value="4.5">≥ 4.5 Stars</option>
+          <option value="4.0">≥ 4.0 Stars</option>
+          <option value="3.0">≥ 3.0 Stars</option>
+        </select>
       </div>
 
-      {/* Supplier Table */}
-      <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/40">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900 text-slate-400 border-b border-slate-800 uppercase tracking-wider text-[10px]">
+      {/* Table */}
+      <div style={{ border: '1px solid var(--color-hairline)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-1)' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="data-table">
+            <thead>
               <tr>
-                <th className="px-4 py-3">Supplier Name & ID</th>
-                <th className="px-4 py-3">Rating</th>
-                <th className="px-4 py-3">Lead Time</th>
-                <th className="px-4 py-3">Contact</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th>Supplier</th>
+                <th>Rating</th>
+                <th>Lead Time</th>
+                <th>Contact</th>
+                <th>Status</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                    Loading suppliers...
-                  </td>
-                </tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--color-ink-mute)', padding: 40 }}>Loading suppliers…</td></tr>
               ) : suppliers.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                    No suppliers match your search criteria.
-                  </td>
-                </tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--color-ink-mute)', padding: 40 }}>No suppliers match your criteria.</td></tr>
               ) : (
                 suppliers.map((sup) => (
-                  <tr key={sup.supplierId} className="hover:bg-slate-800/30 transition">
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-white">{sup.name}</div>
-                      <div className="text-[10px] text-slate-500 font-mono">{sup.supplierId}</div>
+                  <tr key={sup.supplierId}>
+                    <td>
+                      <div style={{ fontWeight: 400, color: 'var(--color-ink)', fontSize: 14 }}>{sup.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--color-ink-mute)', fontFamily: 'monospace' }}>{sup.supplierId}</div>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center space-x-1.5">
-                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                        <span className="font-semibold text-white">
-                          {Number(sup.rating).toFixed(2)}
-                        </span>
-                        <span className="text-[10px] text-slate-500">/ 5.0</span>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ display: 'flex', gap: 2 }}>{starRating(sup.rating)}</div>
+                        <span className="tnum" style={{ fontSize: 13, fontWeight: 400, color: 'var(--color-ink)' }}>{Number(sup.rating).toFixed(2)}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center space-x-1 text-slate-300">
-                        <Clock className="w-3.5 h-3.5 text-slate-500" />
-                        <span>{sup.leadTime} days</span>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Clock size={12} color="var(--color-ink-mute)" />
+                        <span className="tnum" style={{ fontSize: 14, color: 'var(--color-ink)' }}>{sup.leadTime}d</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center space-x-1 text-slate-300 truncate max-w-xs">
-                        <Mail className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                        <span className="truncate">{sup.contactDetails}</span>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 220 }}>
+                        <Mail size={12} color="var(--color-ink-mute)" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: 13, color: 'var(--color-ink-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sup.contactDetails}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                          sup.isActive
-                            ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60'
-                            : 'bg-rose-950/60 text-rose-400 border-rose-800/60'
-                        }`}
-                      >
+                    <td>
+                      <span className={`pill-tag ${sup.isActive ? 'pill-success' : 'pill-error'}`} style={{ fontSize: 9 }}>
                         {sup.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end space-x-1">
-                        <button
-                          onClick={() => setHistorySupplier(sup)}
-                          title="View Procurement History"
-                          className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition"
-                        >
-                          <History className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => openEditModal(sup)}
-                          title="Edit Supplier"
-                          className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                        <button onClick={() => setHistorySupplier(sup)} className="btn-ghost-sm" style={{ fontSize: 12 }} title="Procurement History"><History size={12} /></button>
+                        <button onClick={() => openEditModal(sup)} className="btn-ghost-sm" style={{ fontSize: 12 }} title="Edit"><Edit2 size={12} /></button>
                         {isAdmin && sup.isActive && (
-                          <button
-                            onClick={() => handleDeactivate(sup.supplierId)}
-                            title="Deactivate Supplier (BR-5)"
-                            className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition"
-                          >
-                            <PowerOff className="w-3.5 h-3.5" />
-                          </button>
+                          <button onClick={() => handleDeactivate(sup.supplierId)} className="btn-ghost-sm" style={{ fontSize: 12, color: '#b91c1c', borderColor: '#fca5a5' }} title="Deactivate (BR-5)"><PowerOff size={12} /></button>
                         )}
                       </div>
                     </td>
@@ -323,103 +227,38 @@ export default function SuppliersPage() {
         </div>
       </div>
 
-      {/* Add / Edit Supplier Modal */}
+      {/* Add / Edit Modal */}
       {(showAddModal || editingSupplier) && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-5 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h2 className="text-base font-bold text-white flex items-center space-x-2">
-                <Building2 className="w-4 h-4 text-emerald-400" />
-                <span>{editingSupplier ? 'Edit Supplier' : 'Register New Supplier'}</span>
-              </h2>
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setEditingSupplier(null);
-                }}
-                className="text-slate-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div className="text-heading-sm" style={{ color: 'var(--color-ink)' }}>{editingSupplier ? 'Edit Supplier' : 'Register New Supplier'}</div>
+              <button onClick={() => { setShowAddModal(false); setEditingSupplier(null); }} className="btn-ghost-sm" style={{ padding: '4px 8px' }}><X size={14} /></button>
             </div>
-
-            <form onSubmit={editingSupplier ? handleEdit : handleCreate} className="space-y-3">
+            <hr className="divider" style={{ marginBottom: 20 }} />
+            <form onSubmit={editingSupplier ? handleEdit : handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                  Supplier Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Apex Global Distributors"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--color-ink-mute)', marginBottom: 5 }}>Supplier Name *</label>
+                <input required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Apex Global Distributors" className="input" style={{ fontSize: 14 }} />
               </div>
-
               <div>
-                <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                  Contact Details (Email, Phone, Address) *
-                </label>
-                <textarea
-                  required
-                  rows={2}
-                  value={contactDetails}
-                  onChange={(e) => setContactDetails(e.target.value)}
-                  placeholder="orders@apexdistributors.com, +1-555-0192"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--color-ink-mute)', marginBottom: 5 }}>Contact Details *</label>
+                <textarea required rows={2} value={contactDetails} onChange={e => setContactDetails(e.target.value)} placeholder="orders@example.com, +1-555-0192" className="input" style={{ fontSize: 14, resize: 'vertical' }} />
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                    Lead Time (Days) *
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    required
-                    value={leadTime}
-                    onChange={(e) => setLeadTime(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--color-ink-mute)', marginBottom: 5 }}>Lead Time (days) *</label>
+                  <input type="number" min={1} required value={leadTime} onChange={e => setLeadTime(Number(e.target.value))} className="input" style={{ fontSize: 14 }} />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                    Rating (0.00 – 5.00) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min={0}
-                    max={5}
-                    required
-                    value={rating}
-                    onChange={(e) => setRating(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--color-ink-mute)', marginBottom: 5 }}>Rating (0–5) *</label>
+                  <input type="number" step="0.1" min={0} max={5} required value={rating} onChange={e => setRating(Number(e.target.value))} className="input" style={{ fontSize: 14 }} />
                 </div>
               </div>
-
-              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddModal(false);
-                    setEditingSupplier(null);
-                  }}
-                  className="px-3 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-white text-xs transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow transition"
-                >
-                  {editingSupplier ? 'Save Changes' : 'Create Supplier'}
-                </button>
+              <hr className="divider" />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button type="button" onClick={() => { setShowAddModal(false); setEditingSupplier(null); }} className="btn-ghost-sm">Cancel</button>
+                <button type="submit" className="btn-primary-sm">{editingSupplier ? 'Save Changes' : 'Create Supplier'}</button>
               </div>
             </form>
           </div>
@@ -428,55 +267,37 @@ export default function SuppliersPage() {
 
       {/* Procurement History Modal */}
       {historySupplier && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-lg w-full p-5 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <div>
-                <h2 className="text-base font-bold text-white flex items-center space-x-2">
-                  <History className="w-4 h-4 text-emerald-400" />
-                  <span>Procurement History & Quality Log</span>
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">{historySupplier.name} ({historySupplier.supplierId})</p>
+                <div className="text-heading-sm" style={{ color: 'var(--color-ink)' }}>Procurement History</div>
+                <div style={{ fontSize: 13, color: 'var(--color-ink-mute)', marginTop: 2 }}>{historySupplier.name}</div>
               </div>
-              <button onClick={() => setHistorySupplier(null)} className="text-slate-400 hover:text-white">
-                <X className="w-4 h-4" />
-              </button>
+              <button onClick={() => setHistorySupplier(null)} className="btn-ghost-sm" style={{ padding: '4px 8px' }}><X size={14} /></button>
             </div>
-
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs">
-                <div>
-                  <span className="text-slate-500 block text-[10px]">CURRENT RATING</span>
-                  <span className="text-amber-400 font-bold flex items-center space-x-1 mt-0.5">
-                    <Star className="w-3.5 h-3.5 fill-amber-400" />
-                    <span>{Number(historySupplier.rating).toFixed(2)} / 5.0</span>
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[10px]">AVG LEAD TIME</span>
-                  <span className="text-white font-bold mt-0.5 block">{historySupplier.leadTime} Days</span>
+            <hr className="divider" style={{ marginBottom: 16 }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div style={{ padding: '12px 16px', background: 'var(--color-canvas-soft)', borderRadius: 8, border: '1px solid var(--color-hairline)' }}>
+                <div style={{ fontSize: 10, color: 'var(--color-ink-mute)', textTransform: 'uppercase', letterSpacing: '0.1px', marginBottom: 4 }}>RATING</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 2 }}>{starRating(historySupplier.rating)}</div>
+                  <span className="tnum" style={{ fontWeight: 400, color: 'var(--color-ink)' }}>{Number(historySupplier.rating).toFixed(2)} / 5.0</span>
                 </div>
               </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Performance Event Log (BR-4)
-                </label>
-                <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-[11px] text-slate-300 max-h-56 overflow-y-auto whitespace-pre-wrap">
-                  {historySupplier.procurementHistory && historySupplier.procurementHistory.trim()
-                    ? historySupplier.procurementHistory
-                    : 'No past deliveries recorded yet. Rating updates will appear here automatically on PO receipt.'}
-                </div>
+              <div style={{ padding: '12px 16px', background: 'var(--color-canvas-soft)', borderRadius: 8, border: '1px solid var(--color-hairline)' }}>
+                <div style={{ fontSize: 10, color: 'var(--color-ink-mute)', textTransform: 'uppercase', letterSpacing: '0.1px', marginBottom: 4 }}>AVG LEAD TIME</div>
+                <span className="tnum" style={{ fontWeight: 400, color: 'var(--color-ink)', fontSize: 16 }}>{historySupplier.leadTime} days</span>
               </div>
             </div>
-
-            <div className="flex justify-end pt-2 border-t border-slate-800">
-              <button
-                onClick={() => setHistorySupplier(null)}
-                className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs transition"
-              >
-                Close
-              </button>
+            <div>
+              <div style={{ fontSize: 10, color: 'var(--color-ink-mute)', textTransform: 'uppercase', letterSpacing: '0.1px', marginBottom: 8 }}>Performance Event Log (BR-4)</div>
+              <div style={{ background: 'var(--color-canvas-soft)', border: '1px solid var(--color-hairline)', borderRadius: 8, padding: '12px 14px', fontFamily: 'monospace', fontSize: 12, color: 'var(--color-ink-secondary)', maxHeight: 200, overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
+                {historySupplier.procurementHistory?.trim() || 'No past deliveries recorded yet. Rating updates appear here automatically on PO receipt.'}
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+              <button onClick={() => setHistorySupplier(null)} className="btn-ghost-sm">Close</button>
             </div>
           </div>
         </div>
