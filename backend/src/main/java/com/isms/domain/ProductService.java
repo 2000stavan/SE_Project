@@ -85,14 +85,14 @@ public class ProductService {
             throw new ApiException(HttpStatus.CONFLICT, "STOCK_EXISTS", "Cannot delete product with quantity on hand > 0");
         }
 
-        // Check if referenced in PO line items
-        boolean inPos = poLineItemRepository.findAll().stream().anyMatch(li -> skuId.equals(li.getSkuId()));
+        // Check if referenced in PO line items (BUG-10 fix: indexed exists query instead of findAll stream)
+        boolean inPos = poLineItemRepository.existsByIdSkuId(skuId);
         if (inPos) {
             throw new ApiException(HttpStatus.CONFLICT, "REFERENCED_IN_PO", "Cannot delete product referenced in purchase orders");
         }
 
         // Check if referenced in Sales line items
-        boolean inSales = salesOrderLineItemRepository.findAll().stream().anyMatch(li -> skuId.equals(li.getSkuId()));
+        boolean inSales = salesOrderLineItemRepository.existsByIdSkuId(skuId);
         if (inSales) {
             throw new ApiException(HttpStatus.CONFLICT, "REFERENCED_IN_SALES", "Cannot delete product referenced in sales orders");
         }

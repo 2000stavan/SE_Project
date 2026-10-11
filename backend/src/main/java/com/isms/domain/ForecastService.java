@@ -27,6 +27,7 @@ public class ForecastService {
     private final SalesOrderRepository salesOrderRepository;
     private final SalesOrderLineItemRepository salesOrderLineItemRepository;
     private final SupplierRepository supplierRepository;
+    private final com.isms.repository.ForecastAccuracyRepository forecastAccuracyRepository;
     private final AuditLogger auditLogger;
     private final ForecastService self;
 
@@ -37,6 +38,7 @@ public class ForecastService {
             SalesOrderRepository salesOrderRepository,
             SalesOrderLineItemRepository salesOrderLineItemRepository,
             SupplierRepository supplierRepository,
+            com.isms.repository.ForecastAccuracyRepository forecastAccuracyRepository,
             AuditLogger auditLogger,
             @Lazy ForecastService self) {
         this.forecastRepository = forecastRepository;
@@ -45,6 +47,7 @@ public class ForecastService {
         this.salesOrderRepository = salesOrderRepository;
         this.salesOrderLineItemRepository = salesOrderLineItemRepository;
         this.supplierRepository = supplierRepository;
+        this.forecastAccuracyRepository = forecastAccuracyRepository;
         this.auditLogger = auditLogger;
         this.self = self != null ? self : this;
     }
@@ -503,5 +506,79 @@ public class ForecastService {
         }
 
         return (int) Math.round(Math.max(1.0, weeklyForecast));
+    }
+
+    // GAP-04: Forecast.Accuracy.Track — record predicted vs actual demand
+    public void recordActualDemand(String skuId, int quantitySold) {
+        LocalDate now = LocalDate.now();
+        int week = now.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+        String period = now.getYear() + "-W" + (week < 10 ? "0" + week : week);
+        recordActualDemand(skuId, quantitySold, period);
+    }
+
+    public void recordActualDemand(String skuId, int quantitySold, String period) {
+        Product product = productRepository.findById(skuId).orElse(null);
+        if (product == null) return;
+
+        Optional<com.isms.model.ForecastAccuracy> existingOpt = forecastAccuracyRepository.findByProductSkuIdAndForecastPeriod(skuId, period);
+        com.isms.model.ForecastAccuracy acc;
+        if (existingOpt.isPresent()) {
+            acc = existingOpt.get();
+            acc.setActualDemand(acc.getActualDemand() + quantitySold);
+        } else {
+            List<Forecast> forecasts = forecastRepository.findByIdSkuId(skuId);
+            int predicted = forecasts.stream()
+                    .filter(f -> period.equals(f.getForecastPeriod()))
+                    .mapToInt(Forecast::getPredictedDemand)
+                    .findFirst()
+                    .orElse(Math.max(product.getReorderPoint() * 2, 10));
+
+            acc = new com.isms.model.ForecastAccuracy(
+                    "ACC-" + UUID.randomUUID().toString().substring(0, 8),
+                    product,
+                    period,
+                    predicted,
+                    quantitySold,
+                    0,
+                    BigDecimal.ZERO,
+                    OffsetDateTime.now()
+            );
+        }
+
+        int absErr = Math.abs(acc.getPredictedDemand() - acc.getActualDemand());
+        acc.setAbsoluteError(absErr);
+        if (acc.getPredictedDemand() > 0) {
+            double pct = ((double) absErr / acc.getPredictedDemand()) * 100.0;
+            acc.setPercentageError(BigDecimal.valueOf(Math.min(pct, 999.99)).setScale(2, RoundingMode.HALF_UP));
+        } else {
+            acc.setPercentageError(BigDecimal.ZERO);
+        }
+        acc.setRecordedAt(OffsetDateTime.now());
+        forecastAccuracyRepository.save(acc);
+    }
+
+    public List<Map<String, Object>> getAccuracyTracking(String skuId) {
+        List<com.isms.model.ForecastAccuracy> records;
+        if (skuId != null && !skuId.isBlank()) {
+            records = forecastAccuracyRepository.findByProductSkuIdOrderByForecastPeriodDesc(skuId);
+        } else {
+            records = forecastAccuracyRepository.findAllByOrderByRecordedAtDesc();
+        }
+
+        return records.stream().map(r -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("accuracyId", r.getAccuracyId());
+            map.put("skuId", r.getProduct().getSkuId());
+            map.put("productName", r.getProduct().getName());
+            map.put("period", r.getForecastPeriod());
+            map.put("predictedDemand", r.getPredictedDemand());
+            map.put("actualDemand", r.getActualDemand());
+            map.put("absoluteError", r.getAbsoluteError());
+            map.put("percentageError", r.getPercentageError());
+            double accuracyRate = Math.max(0.0, 100.0 - r.getPercentageError().doubleValue());
+            map.put("accuracyRate", Math.round(accuracyRate * 10.0) / 10.0);
+            map.put("recordedAt", r.getRecordedAt().toString());
+            return map;
+        }).collect(Collectors.toList());
     }
 }

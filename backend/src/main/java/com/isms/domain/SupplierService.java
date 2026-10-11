@@ -15,9 +15,15 @@ import java.util.List;
 public class SupplierService {
 
     private final SupplierRepository supplierRepository;
+    private final com.isms.repository.PurchaseOrderRepository purchaseOrderRepository;
+    private final com.isms.audit.AuditLogger auditLogger;
 
-    public SupplierService(SupplierRepository supplierRepository) {
+    public SupplierService(SupplierRepository supplierRepository,
+                           com.isms.repository.PurchaseOrderRepository purchaseOrderRepository,
+                           com.isms.audit.AuditLogger auditLogger) {
         this.supplierRepository = supplierRepository;
+        this.purchaseOrderRepository = purchaseOrderRepository;
+        this.auditLogger = auditLogger;
     }
 
     public Supplier create(Supplier supplier) {
@@ -66,6 +72,15 @@ public class SupplierService {
         return supplierRepository.save(existing);
     }
 
+    // BR-4: Recalculate supplier rating only after PO reaches Received or Cancelled
+    public void trackPerformance(String supplierId, com.isms.model.enums.PoStatus poStatus, boolean onTime, BigDecimal ratingAdjustment) {
+        if (poStatus != null && poStatus != com.isms.model.enums.PoStatus.RECEIVED && poStatus != com.isms.model.enums.PoStatus.CANCELLED) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PO_STATUS_FOR_RATING",
+                    "Supplier performance rating can only be recalculated when PO is in Received or Cancelled status (BR-4). Current status: " + poStatus.getValue());
+        }
+        trackPerformance(supplierId, onTime, ratingAdjustment);
+    }
+
     public void trackPerformance(String supplierId, boolean onTime, BigDecimal ratingAdjustment) {
         Supplier existing = supplierRepository.findById(supplierId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "SUPPLIER_NOT_FOUND", "Supplier not found: " + supplierId));
@@ -104,5 +119,62 @@ public class SupplierService {
     public Supplier findById(String supplierId) {
         return supplierRepository.findById(supplierId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "SUPPLIER_NOT_FOUND", "Supplier not found: " + supplierId));
+    }
+
+    public java.util.Map<String, Object> getSupplierHistory(String supplierId) {
+        Supplier supplier = findById(supplierId);
+        List<com.isms.model.PurchaseOrder> pos = purchaseOrderRepository.findBySupplierSupplierId(supplierId);
+
+        int totalOrders = pos.size();
+        int receivedOrders = 0;
+        int onTimeOrders = 0;
+        int cancelledOrders = 0;
+        int activeOrders = 0;
+
+        List<java.util.Map<String, Object>> poList = new java.util.ArrayList<>();
+        for (com.isms.model.PurchaseOrder po : pos) {
+            java.util.Map<String, Object> item = new java.util.HashMap<>();
+            item.put("poId", po.getPoId());
+            item.put("status", po.getStatus().getValue());
+            item.put("orderDate", po.getOrderDate() != null ? po.getOrderDate().toString() : "");
+            item.put("expectedDate", po.getExpectedDate() != null ? po.getExpectedDate().toString() : "");
+
+            boolean isReceived = po.getStatus() == com.isms.model.enums.PoStatus.RECEIVED;
+            boolean isCancelled = po.getStatus() == com.isms.model.enums.PoStatus.CANCELLED;
+            if (isReceived) {
+                receivedOrders++;
+                boolean onTime = po.getExpectedDate() != null && !java.time.LocalDate.now().isAfter(po.getExpectedDate());
+                if (onTime) onTimeOrders++;
+                item.put("onTime", onTime);
+            } else if (isCancelled) {
+                cancelledOrders++;
+                item.put("onTime", false);
+            } else {
+                activeOrders++;
+                item.put("onTime", null);
+            }
+
+            poList.add(item);
+        }
+
+        double onTimeRate = receivedOrders > 0 ? ((double) onTimeOrders / receivedOrders) * 100.0 : 100.0;
+
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("supplierId", supplier.getSupplierId());
+        result.put("name", supplier.getName());
+        result.put("rating", supplier.getRating());
+        result.put("leadTime", supplier.getLeadTime());
+        result.put("isActive", supplier.getIsActive());
+        result.put("contactDetails", supplier.getContactDetails());
+        result.put("totalOrders", totalOrders);
+        result.put("receivedOrders", receivedOrders);
+        result.put("onTimeOrders", onTimeOrders);
+        result.put("onTimeRate", Math.round(onTimeRate * 10.0) / 10.0);
+        result.put("cancelledOrders", cancelledOrders);
+        result.put("activeOrders", activeOrders);
+        result.put("orders", poList);
+        result.put("procurementHistory", supplier.getProcurementHistory() != null ? supplier.getProcurementHistory() : "");
+
+        return result;
     }
 }

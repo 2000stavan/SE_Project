@@ -37,6 +37,6 @@ public class SalesPersonnelService {
             }
         }
 
-        return salesOrderService.createOrder("Physical", customerInfo != null ? customerInfo : "Walk-in Customer", mutableLines);
+        return salesOrderService.createOrder("physical", customerInfo != null ? customerInfo : "Walk-in Customer", mutableLines);
     }
 }

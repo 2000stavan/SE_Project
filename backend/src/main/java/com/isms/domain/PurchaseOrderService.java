@@ -182,6 +182,8 @@ public class PurchaseOrderService {
                     "Purchase order must be Pending Approval to reject (current status: " + po.getStatus().getValue() + ")");
         }
 
+        // Design Decision (GAP-12): Following SRS §A8.1 — PO reverts to DRAFT with reason so creator can revise.
+        // Use Case §B5 mentions CANCELLED, but SRS authoritative specification defines DRAFT return.
         po.setStatus(PoStatus.DRAFT);
         purchaseOrderRepository.save(po);
 
@@ -189,7 +191,12 @@ public class PurchaseOrderService {
         String msg = String.format("Purchase order %s was rejected: %s", poId, (reason != null && !reason.isBlank() ? reason : "No reason provided"));
         if (approverId != null) {
             userRepository.findByUserId(approverId).ifPresent(user -> {
-                // Sent to manager/approver
+                notificationService.createNotification(
+                        user,
+                        com.isms.model.enums.NotificationType.ORDER_UPDATE,
+                        com.isms.model.enums.NotificationChannel.EMAIL,
+                        msg
+                );
             });
         }
 
@@ -213,7 +220,7 @@ public class PurchaseOrderService {
         purchaseOrderRepository.save(po);
 
         if (wasActive) {
-            supplierService.trackPerformance(po.getSupplier().getSupplierId(), false, BigDecimal.valueOf(-0.10));
+            supplierService.trackPerformance(po.getSupplier().getSupplierId(), po.getStatus(), false, BigDecimal.valueOf(-0.10));
         }
 
         auditLogger.log(poId, "PO_CANCELLED", "purchase_orders", Map.of("user_id", userId != null ? userId : "system"));
@@ -277,7 +284,7 @@ public class PurchaseOrderService {
             // Track supplier on-time performance
             boolean onTime = !LocalDate.now().isAfter(po.getExpectedDate());
             BigDecimal ratingAdj = onTime ? BigDecimal.valueOf(0.10) : BigDecimal.valueOf(-0.10);
-            supplierService.trackPerformance(po.getSupplier().getSupplierId(), onTime, ratingAdj);
+            supplierService.trackPerformance(po.getSupplier().getSupplierId(), po.getStatus(), onTime, ratingAdj);
         } else {
             po.setStatus(PoStatus.PARTIALLY_RECEIVED);
         }

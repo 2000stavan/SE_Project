@@ -83,13 +83,22 @@ public class NotificationService {
     public Notification markAsRead(String notificationId) {
         Notification notification = notificationRepository.findById(notificationId).orElse(null);
         if (notification != null) {
-            notification.setStatus(NotificationStatus.SENT);
+            notification.setStatus(NotificationStatus.READ);
+            notification.setReadAt(OffsetDateTime.now());
             return notificationRepository.save(notification);
         }
         return null;
     }
 
-    private void createNotification(User user, NotificationType type, NotificationChannel channel, String message) {
+    public Notification createNotification(String userId, NotificationType type, NotificationChannel channel, String message) {
+        User user = userRepository.findByUserId(userId).orElse(null);
+        if (user == null) {
+            return null;
+        }
+        return createNotification(user, type, channel, message);
+    }
+
+    public Notification createNotification(User user, NotificationType type, NotificationChannel channel, String message) {
         Notification notification = new Notification(
                 "NTF-" + UUID.randomUUID().toString().substring(0, 8),
                 user,
@@ -97,8 +106,20 @@ public class NotificationService {
                 channel,
                 message,
                 OffsetDateTime.now(),
-                NotificationStatus.SENT
+                NotificationStatus.PENDING
         );
-        notificationRepository.save(notification);
+
+        if (channel == NotificationChannel.EMAIL && user.getEmail() != null) {
+            try {
+                mailerAdapter.sendEmail(user.getEmail(), "ISMS Alert: " + type.getValue(), message);
+                notification.setStatus(NotificationStatus.SENT);
+            } catch (Exception e) {
+                notification.setStatus(NotificationStatus.FAILED);
+            }
+        } else {
+            notification.setStatus(NotificationStatus.SENT);
+        }
+
+        return notificationRepository.save(notification);
     }
 }

@@ -54,7 +54,7 @@ public class StockRecordService {
 
     public StockRecord updateStock(String skuId, String locationId, int quantityOnHand) {
         if (quantityOnHand < 0) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_QUANTITY", "Quantity on hand cannot be negative (BR-3)");
+            throw new com.isms.error.InsufficientStockException("Quantity on hand cannot be negative (BR-3)");
         }
 
         Product product = productRepository.findById(skuId)

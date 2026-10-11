@@ -53,6 +53,10 @@ public class SalesOrderService {
     @org.springframework.beans.factory.annotation.Autowired
     private SalesOrderService self;
 
+    @Lazy
+    @org.springframework.beans.factory.annotation.Autowired
+    private ForecastService forecastService;
+
     public SalesOrderService(
             SalesOrderRepository salesOrderRepository,
             SalesOrderLineItemRepository salesOrderLineItemRepository,
@@ -118,6 +122,9 @@ public class SalesOrderService {
         // 2. All stock available -> Create order
         SalesOrder order = new SalesOrder(orderId, channel, customerInfo, SalesStatus.COMPLETED, null, OffsetDateTime.now());
 
+        // Design Decision (GAP-13): Physical sale deducts on order confirmation (SRS §A4.5),
+        // while marketplace webhook orders deduct on payment confirmation (`order-paid`).
+        int lineNum = 1;
         for (Map<String, Object> line : lines) {
             String rawSku = (String) line.get("sku_id");
             final String skuId = (rawSku != null) ? rawSku : (String) line.get("skuId");
@@ -130,7 +137,7 @@ public class SalesOrderService {
             Product product = productRepository.findById(skuId)
                     .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "Product not found: " + skuId));
 
-            SalesOrderLineItemId lineId = new SalesOrderLineItemId(order.getOrderId(), product.getSkuId());
+            SalesOrderLineItemId lineId = new SalesOrderLineItemId(order.getOrderId(), product.getSkuId(), lineNum++);
             SalesOrderLineItem lineItem = new SalesOrderLineItem(lineId, order, product, loc, qty, product.getUnitPrice());
             order.addLineItem(lineItem);
         }
@@ -140,9 +147,12 @@ public class SalesOrderService {
         order.setPaymentReference(paymentRef);
         SalesOrder savedOrder = salesOrderRepository.save(order);
 
-        // 4. Deduct stock for all line items
+        // 4. Deduct stock for all line items and record actual demand
         for (SalesOrderLineItem item : savedOrder.getLineItems()) {
             stockRecordService.deductStock(item.getProduct().getSkuId(), item.getLocationId(), item.getQuantity());
+            if (forecastService != null) {
+                forecastService.recordActualDemand(item.getProduct().getSkuId(), item.getQuantity());
+            }
         }
 
         // 5. Generate invoice PDF
@@ -213,6 +223,9 @@ public class SalesOrderService {
             List<SalesOrderLineItem> items = salesOrderLineItemRepository.findByIdOrderId(order.getOrderId());
             for (SalesOrderLineItem item : items) {
                 stockRecordService.deductStock(item.getProduct().getSkuId(), item.getLocationId(), item.getQuantity());
+                if (forecastService != null) {
+                    forecastService.recordActualDemand(item.getProduct().getSkuId(), item.getQuantity());
+                }
             }
 
             order.setStatus(SalesStatus.COMPLETED);
@@ -242,6 +255,7 @@ public class SalesOrderService {
     private void createPendingOrder(String orderId, String channel, String customerInfo, List<Map<String, Object>> lines) {
         SalesOrder order = new SalesOrder(orderId, channel, customerInfo != null ? customerInfo : "", SalesStatus.PENDING, null, OffsetDateTime.now());
         if (lines != null) {
+            int lineNum = 1;
             for (Map<String, Object> line : lines) {
                 String rawSku = (String) line.get("sku_id");
                 final String skuId = (rawSku != null) ? rawSku : (String) line.get("skuId");
@@ -253,7 +267,7 @@ public class SalesOrderService {
 
                 Product product = productRepository.findById(skuId).orElse(null);
                 if (product != null) {
-                    SalesOrderLineItemId lineId = new SalesOrderLineItemId(order.getOrderId(), product.getSkuId());
+                    SalesOrderLineItemId lineId = new SalesOrderLineItemId(order.getOrderId(), product.getSkuId(), lineNum++);
                     SalesOrderLineItem item = new SalesOrderLineItem(lineId, order, product, loc, qty, product.getUnitPrice());
                     order.addLineItem(item);
                 }
