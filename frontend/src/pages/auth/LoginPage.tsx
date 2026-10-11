@@ -1,3 +1,5 @@
+import Logo from '../../components/Logo';
+import ThemeToggle from '../../components/ThemeToggle';
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -68,6 +70,7 @@ export default function LoginPage() {
       alignItems: 'center', justifyContent: 'center',
       padding: '24px 16px',
     }}>
+      <div style={{ position: 'fixed', top: 14, right: 14, zIndex: 10 }}><ThemeToggle /></div>
 
       {/* Gradient mesh fills the top 50% */}
       <div style={{
@@ -75,10 +78,10 @@ export default function LoginPage() {
         pointerEvents: 'none', zIndex: 0,
         background: `
           radial-gradient(ellipse 80% 80% at 0% 0%,   rgba(245,233,212,0.85) 0%, transparent 55%),
-          radial-gradient(ellipse 60% 60% at 25% 15%, rgba(249,107,238,0.40) 0%, transparent 50%),
-          radial-gradient(ellipse 70% 70% at 65% 5%,  rgba(102,94,253,0.60)  0%, transparent 55%),
-          radial-gradient(ellipse 50% 50% at 88% 20%, rgba(234,34,97,0.35)   0%, transparent 50%),
-          radial-gradient(ellipse 100% 60% at 50% 50%,rgba(179,179,249,0.20) 0%, transparent 60%)`,
+          radial-gradient(ellipse 60% 60% at 25% 15%, rgba(251,191,36,0.40) 0%, transparent 50%),
+          radial-gradient(ellipse 70% 70% at 65% 5%,  rgba(20,184,166,0.60)  0%, transparent 55%),
+          radial-gradient(ellipse 50% 50% at 88% 20%, rgba(16,185,129,0.35)   0%, transparent 50%),
+          radial-gradient(ellipse 100% 60% at 50% 50%,rgba(153,246,228,0.20) 0%, transparent 60%)`,
       }} />
 
       {/* Login card — floats over gradient */}
@@ -86,14 +89,7 @@ export default function LoginPage() {
 
         {/* Brand wordmark */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            display: 'inline-flex', width: 52, height: 52, borderRadius: 14,
-            background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-soft) 100%)',
-            alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontWeight: 600, fontSize: 16,
-            boxShadow: '0 4px 16px rgba(83,58,253,0.40)',
-            marginBottom: 16,
-          }}>IS</div>
+          <div style={{ marginBottom: 16 }}><Logo size={56} /></div>
           <div className="text-display-md" style={{ color: 'var(--color-ink)', marginBottom: 6 }}>
             ISMS Sign In
           </div>
@@ -134,12 +130,12 @@ export default function LoginPage() {
                       cursor: 'pointer', textAlign: 'left',
                       transition: 'all 0.15s',
                     }}
-                    onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = 'var(--color-primary-bg-subdued)'; el.style.backgroundColor = 'rgba(83,58,253,0.04)'; }}
+                    onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = 'var(--color-primary-bg-subdued)'; el.style.backgroundColor = 'rgba(13,148,136,0.04)'; }}
                     onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = 'var(--color-hairline)'; el.style.backgroundColor = 'var(--color-canvas-soft)'; }}
                   >
                     <div style={{
                       width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                      backgroundColor: acc.accent + '18',
+                      backgroundColor: `color-mix(in srgb, ${acc.accent} 14%, transparent)`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       <Icon size={14} color={acc.accent} strokeWidth={1.5} />
@@ -219,7 +215,10 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div style={{ marginTop: 16, textAlign: 'center', fontSize: 12, color: 'var(--color-ink-mute)' }}>
+          <div style={{ marginTop: 14, textAlign: 'center', fontSize: 13 }}>
+            <a href="/password-reset" style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>Forgot your password?</a>
+          </div>
+          <div style={{ marginTop: 10, textAlign: 'center', fontSize: 12, color: 'var(--color-ink-mute)' }}>
             Demo password: <code style={{ fontWeight: 400, color: 'var(--color-ink-secondary)' }}>Password123!</code>
           </div>
         </div>

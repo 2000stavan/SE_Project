@@ -1,5 +1,6 @@
 import { ReactElement } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { ShieldCheck } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/auth/LoginPage';
 import Layout from './components/Layout';
@@ -11,117 +12,33 @@ import PurchaseOrdersPage from './pages/purchaseOrders/PurchaseOrdersPage';
 import SalesPage from './pages/sales/SalesPage';
 import ForecastPage from './pages/forecast/ForecastPage';
 import UsersPage from './pages/admin/UsersPage';
-import { Boxes, PackageCheck, AlertTriangle, ShieldCheck } from 'lucide-react';
+import DashboardPage from './pages/dashboard/DashboardPage';
+import AuditLogPage from './pages/admin/AuditLogPage';
+import PasswordResetPage from './pages/auth/PasswordResetPage';
+import NotificationPreferencesPage from './pages/notifications/NotificationPreferencesPage';
+import OnboardingModal from './components/OnboardingModal';
 
-// ── Dashboard Overview ──────────────────────────────────────────────────────
+// ── Role-based Route Guard ──────────────────────────────────────────────────
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  icon: typeof Boxes;
-  label: string;
-  value: string;
-  sub: string;
-  accent: string;
-}) {
-  return (
-    <div style={{
-      backgroundColor: 'var(--color-canvas)',
-      border: '1px solid var(--color-hairline)',
-      borderRadius: 'var(--radius-lg)',
-      padding: '20px 24px',
-      boxShadow: 'var(--shadow-1)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 10, fontWeight: 400, letterSpacing: '0.1px', textTransform: 'uppercase', color: 'var(--color-ink-mute)' }}>
-          {label}
-        </span>
-        <div style={{
-          width: 28, height: 28, borderRadius: 8,
-          backgroundColor: accent + '18',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Icon size={14} color={accent} strokeWidth={1.5} />
-        </div>
-      </div>
-      <div className="tnum" style={{ fontSize: 18, fontWeight: 400, color: 'var(--color-ink)', marginBottom: 4 }}>
-        {value}
-      </div>
-      <div style={{ fontSize: 11, color: 'var(--color-ink-mute)', fontWeight: 300 }}>{sub}</div>
-    </div>
-  );
-}
-
-function DashboardOverview() {
+function RoleGuard({ children, allowedRoles }: { children: ReactElement; allowedRoles: string[] }) {
   const { user } = useAuth();
-  if (!user) return null;
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-      {/* Page header */}
-      <div style={{ borderBottom: '1px solid var(--color-hairline)', paddingBottom: 24 }}>
-        <div className="text-display-lg" style={{ color: 'var(--color-ink)', marginBottom: 6 }}>
-          Welcome back, {user.name}
+  if (!user || !allowedRoles.includes(user.role)) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: 16, textAlign: 'center' }}>
+        <div style={{ width: 56, height: 56, borderRadius: 'var(--radius-xl)', background: 'var(--color-danger-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <ShieldCheck size={24} color="var(--color-danger)" />
         </div>
-        <div style={{ fontSize: 15, color: 'var(--color-ink-mute)', fontWeight: 300 }}>
-          Signed in as{' '}
-          <span style={{ color: 'var(--color-primary)', fontWeight: 400 }}>{user.role}</span>
-          <span style={{ color: 'var(--color-ink-mute)' }}> · {user.userId}</span>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 400, color: 'var(--color-ink)', marginBottom: 6 }}>Access Restricted</div>
+          <div style={{ fontSize: 14, color: 'var(--color-ink-mute)', fontWeight: 300 }}>
+            Your role (<strong>{user?.role}</strong>) does not have permission to view this page.
+          </div>
         </div>
+        <Link to="/" className="btn-primary" style={{ textDecoration: 'none' }}>← Back to Dashboard</Link>
       </div>
-
-      {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-        <StatCard
-          icon={ShieldCheck}
-          label="Session Status"
-          value="Active · 30m Sliding"
-          sub="Automatic token renewal on every request"
-          accent="var(--color-primary)"
-        />
-        <StatCard
-          icon={PackageCheck}
-          label="Assigned Role"
-          value={user.role}
-          sub="Role-based access enforced (RBAC)"
-          accent="#166534"
-        />
-        <StatCard
-          icon={Boxes}
-          label="Database Schema"
-          value="Validated · V1 + V2"
-          sub="10 tables mapped from schema.md via Flyway"
-          accent="#9b6829"
-        />
-        <StatCard
-          icon={AlertTriangle}
-          label="Security Guard"
-          value="5 Fails / 15 min Lock"
-          sub="Login lockout protection active (SE-1)"
-          accent="var(--color-ruby)"
-        />
-      </div>
-
-      {/* Dark feature card */}
-      <div className="card-dark" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ fontSize: 10, fontWeight: 400, letterSpacing: '0.1px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
-          System
-        </div>
-        <div className="text-heading-lg" style={{ color: '#fff', marginBottom: 4 }}>
-          Inventory & Stock Management System
-        </div>
-        <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.65)', fontWeight: 300, maxWidth: 560 }}>
-          Three core use-case modules live: Inventory (C1), Purchase Orders (C2), and Physical Sales (C3).
-          56 backend tests passing. Holt-Winters demand forecasting, WebSocket real-time sync, JWT sliding
-          sessions, and HMAC-signed marketplace webhooks all active.
-        </div>
-      </div>
-    </div>
-  );
+    );
+  }
+  return children;
 }
 
 // ── Protected Route ─────────────────────────────────────────────────────────
@@ -142,7 +59,7 @@ function ProtectedRoute({ children }: { children: ReactElement }) {
   }
 
   if (!user) return <Navigate to="/login" replace />;
-  return <Layout>{children}</Layout>;
+  return <Layout>{children}<OnboardingModal /></Layout>;
 }
 
 // ── App ──────────────────────────────────────────────────────────────────────
@@ -152,15 +69,18 @@ export default function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/"                element={<ProtectedRoute><DashboardOverview /></ProtectedRoute>} />
-        <Route path="/inventory"       element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
-        <Route path="/voice"           element={<ProtectedRoute><VoiceCommandPage /></ProtectedRoute>} />
-        <Route path="/suppliers"       element={<ProtectedRoute><SuppliersPage /></ProtectedRoute>} />
-        <Route path="/purchase-orders" element={<ProtectedRoute><PurchaseOrdersPage /></ProtectedRoute>} />
-        <Route path="/sales"           element={<ProtectedRoute><SalesPage /></ProtectedRoute>} />
-        <Route path="/forecast"        element={<ProtectedRoute><ForecastPage /></ProtectedRoute>} />
-        <Route path="/users"           element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
-        <Route path="/notifications"   element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+        <Route path="/password-reset" element={<PasswordResetPage />} />
+        <Route path="/"                element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/inventory"       element={<ProtectedRoute><RoleGuard allowedRoles={['Administrator','Manager','Warehouse Staff','Sales Personnel']}><InventoryPage /></RoleGuard></ProtectedRoute>} />
+        <Route path="/voice"           element={<ProtectedRoute><RoleGuard allowedRoles={['Administrator','Manager','Warehouse Staff']}><VoiceCommandPage /></RoleGuard></ProtectedRoute>} />
+        <Route path="/suppliers"       element={<ProtectedRoute><RoleGuard allowedRoles={['Administrator','Manager']}><SuppliersPage /></RoleGuard></ProtectedRoute>} />
+        <Route path="/purchase-orders" element={<ProtectedRoute><RoleGuard allowedRoles={['Administrator','Manager','Warehouse Staff']}><PurchaseOrdersPage /></RoleGuard></ProtectedRoute>} />
+        <Route path="/sales"           element={<ProtectedRoute><RoleGuard allowedRoles={['Administrator','Manager','Sales Personnel']}><SalesPage /></RoleGuard></ProtectedRoute>} />
+        <Route path="/forecast"        element={<ProtectedRoute><RoleGuard allowedRoles={['Administrator','Manager']}><ForecastPage /></RoleGuard></ProtectedRoute>} />
+        <Route path="/users"           element={<ProtectedRoute><RoleGuard allowedRoles={['Administrator']}><UsersPage /></RoleGuard></ProtectedRoute>} />
+        <Route path="/notifications"   element={<ProtectedRoute><RoleGuard allowedRoles={['Administrator','Manager','Warehouse Staff','Sales Personnel']}><NotificationsPage /></RoleGuard></ProtectedRoute>} />
+        <Route path="/notifications/preferences" element={<ProtectedRoute><RoleGuard allowedRoles={['Administrator','Manager','Warehouse Staff','Sales Personnel']}><NotificationPreferencesPage /></RoleGuard></ProtectedRoute>} />
+        <Route path="/audit-log"       element={<ProtectedRoute><RoleGuard allowedRoles={['Administrator']}><AuditLogPage /></RoleGuard></ProtectedRoute>} />
         <Route path="*"                element={<Navigate to="/" replace />} />
       </Routes>
     </AuthProvider>
