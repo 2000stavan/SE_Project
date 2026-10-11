@@ -247,9 +247,9 @@ export default function VoiceCommandPage() {
         <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
           <button onClick={startListening} disabled={isRecording}
             style={{ width:88, height:88, borderRadius:'50%', border:'none', cursor: isRecording ? 'not-allowed' : 'pointer',
-              backgroundColor: isRecording ? '#dc2626' : 'var(--color-primary)',
+              backgroundColor: isRecording ? 'var(--c-err-fg)' : 'var(--color-primary)',
               color:'#fff', display:'flex', alignItems:'center', justifyContent:'center',
-              boxShadow: isRecording ? '0 0 0 4px rgba(220,38,38,0.2)' : '0 4px 20px rgba(83,58,253,0.35)',
+              boxShadow: isRecording ? '0 0 0 4px rgba(220,38,38,0.2)' : '0 4px 20px rgba(13,148,136,0.35)',
               transition:'all 0.2s', transform: isRecording ? 'scale(1.05)' : 'scale(1)' }}>
             {isRecording ? <MicOff size={32} /> : <Mic size={32} />}
           </button>
@@ -262,14 +262,14 @@ export default function VoiceCommandPage() {
         <div style={{ fontSize:12, color:'var(--color-ink-mute)', display:'flex', alignItems:'center', gap:8 }}>
           <span>Confidence:</span>
           <div style={{ width:100, height:4, backgroundColor:'var(--color-hairline)', borderRadius:2, overflow:'hidden' }}>
-            <div style={{ width: `${Math.round(confidence*100)}%`, height:'100%', backgroundColor: confidence>0.8 ? '#16a34a' : confidence>0.6 ? '#f59e0b' : '#dc2626', borderRadius:2, transition:'width 0.3s' }} />
+            <div style={{ width: `${Math.round(confidence*100)}%`, height:'100%', backgroundColor: confidence>0.8 ? '#16a34a' : confidence>0.6 ? '#f59e0b' : 'var(--c-err-fg)', borderRadius:2, transition:'width 0.3s' }} />
           </div>
           <span className="tnum" style={{ fontWeight:400, color:'var(--color-ink)' }}>{Math.round(confidence*100)}%</span>
         </div>
 
         {/* Needs Confirmation */}
         {state === 'needs_confirmation' && currentResult && (
-          <div style={{ maxWidth:480, width:'100%', padding:16, border:'1px solid rgba(83,58,253,0.4)', borderRadius:12, backgroundColor:'rgba(83,58,253,0.04)', textAlign:'left' }}>
+          <div style={{ maxWidth:480, width:'100%', padding:16, border:'1px solid rgba(13,148,136,0.4)', borderRadius:12, backgroundColor:'rgba(13,148,136,0.04)', textAlign:'left' }}>
             <div style={{ display:'flex', alignItems:'center', gap:6, color:'var(--color-primary)', fontSize:11, fontWeight:400, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:10 }}>
               <AlertCircle size={14} /> Confirmation Required
             </div>
@@ -289,14 +289,14 @@ export default function VoiceCommandPage() {
 
         {/* Committed */}
         {state === 'committed' && (
-          <div style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 20px', border:'1px solid #bbf7d0', borderRadius:10, backgroundColor:'#f0fdf4', color:'#166534', fontSize:14 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 20px', border:'1px solid var(--c-ok-border)', borderRadius:10, backgroundColor:'var(--c-ok-bg)', color:'var(--c-ok-fg)', fontSize:14 }}>
             <CheckCircle2 size={18} /> Stock update committed and broadcast via WebSocket!
           </div>
         )}
 
         {/* Low Confidence */}
         {state === 'low_confidence' && (
-          <div style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 20px', border:'1px solid #fde68a', borderRadius:10, backgroundColor:'#fffbeb', color:'#92400e', fontSize:14 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 20px', border:'1px solid var(--c-warn-border)', borderRadius:10, backgroundColor:'var(--c-warn-bg)', color:'var(--c-warn-fg)', fontSize:14 }}>
             <AlertCircle size={18} /> Confidence below threshold (0.75). Please repeat or use the typed form below.
           </div>
         )}

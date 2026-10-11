@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiRequest } from '../../api/client';
-import { Bell, CheckCircle2, AlertTriangle, Info, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Bell, CheckCircle2, AlertTriangle, Info, Clock, Settings2 } from 'lucide-react';
 
 interface NotificationItem {
   notificationId: string;
@@ -86,6 +87,7 @@ export default function NotificationsPage() {
           </div>
           <div style={{ fontSize:14, color:'var(--color-ink-mute)', fontWeight:300 }}>System notifications, low-stock warnings, and broadcast alerts via WebSocket (F2)</div>
         </div>
+        <Link to="/notifications/preferences" className="btn-ghost-sm" style={{ textDecoration:'none' }}><Settings2 size={13} /> Preferences</Link>
         <div style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 12px', borderRadius:'var(--radius-pill)', border:'1px solid var(--color-hairline)', backgroundColor:'var(--color-canvas-soft)' }}>
           <span style={{ width:8, height:8, borderRadius:'50%', backgroundColor: wsConnected ? '#16a34a' : 'var(--color-ink-mute)', display:'inline-block', boxShadow: wsConnected ? '0 0 0 3px rgba(22,163,74,0.18)' : 'none' }} />
           <span style={{ fontSize:12, color:'var(--color-ink-mute)', fontWeight:300 }}>{wsConnected ? 'Live /ws/alerts connected' : 'WebSocket standby'}</span>
@@ -109,27 +111,27 @@ export default function NotificationsPage() {
               <div key={item.notificationId}
                 style={{
                   padding:16, borderRadius:'var(--radius-lg)', border:'1px solid',
-                  borderColor: isUnread ? (isLowStock ? '#fde68a' : 'rgba(83,58,253,0.35)') : 'var(--color-hairline)',
-                  backgroundColor: isUnread ? (isLowStock ? '#fffbeb' : 'rgba(83,58,253,0.03)') : 'var(--color-canvas-soft)',
+                  borderColor: isUnread ? (isLowStock ? 'var(--c-warn-border)' : 'rgba(13,148,136,0.35)') : 'var(--color-hairline)',
+                  backgroundColor: isUnread ? (isLowStock ? 'var(--c-warn-bg)' : 'rgba(13,148,136,0.03)') : 'var(--color-canvas-soft)',
                   display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16,
                   boxShadow: isUnread ? 'var(--shadow-1)' : 'none', transition:'background 0.15s',
                 }}>
                 <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
                   <div style={{ padding:8, borderRadius:8, marginTop:2, flexShrink:0,
-                    backgroundColor: isLowStock ? '#fef9c3' : 'rgba(83,58,253,0.08)',
-                    color: isLowStock ? '#92400e' : 'var(--color-primary)' }}>
+                    backgroundColor: isLowStock ? 'var(--c-warn-bg)' : 'rgba(13,148,136,0.08)',
+                    color: isLowStock ? 'var(--c-warn-fg)' : 'var(--color-primary)' }}>
                     {isLowStock ? <AlertTriangle size={14} /> : <Info size={14} />}
                   </div>
                   <div>
                     <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:5 }}>
                       <span className="pill-tag" style={{ fontSize:9,
-                        backgroundColor: isLowStock ? '#fef9c3' : 'rgba(83,58,253,0.08)',
-                        color: isLowStock ? '#92400e' : 'var(--color-primary)',
-                        borderColor: isLowStock ? '#fde68a' : 'rgba(83,58,253,0.25)' }}>
+                        backgroundColor: isLowStock ? 'var(--c-warn-bg)' : 'rgba(13,148,136,0.08)',
+                        color: isLowStock ? 'var(--c-warn-fg)' : 'var(--color-primary)',
+                        borderColor: isLowStock ? 'var(--c-warn-border)' : 'rgba(13,148,136,0.25)' }}>
                         {item.type}
                       </span>
                       {isUnread && (
-                        <span style={{ fontSize:9, padding:'2px 6px', borderRadius:4, backgroundColor:'rgba(83,58,253,0.12)', color:'var(--color-primary)', fontWeight:400, letterSpacing:'0.06em' }}>NEW</span>
+                        <span style={{ fontSize:9, padding:'2px 6px', borderRadius:4, backgroundColor:'rgba(13,148,136,0.12)', color:'var(--color-primary)', fontWeight:400, letterSpacing:'0.06em' }}>NEW</span>
                       )}
                     </div>
                     <div style={{ fontSize:14, color:'var(--color-ink)', fontWeight:300, marginBottom:6 }}>{item.message}</div>

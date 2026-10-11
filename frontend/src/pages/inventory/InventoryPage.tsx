@@ -101,7 +101,7 @@ export default function InventoryPage() {
     try {
       await apiRequest('/api/v1/products', {
         method: 'POST',
-        body: JSON.stringify({ skuId: newSku, name: newName, category: newCategory, unitPrice: newPrice, reorderPoint: newReorderPoint, unitOfMeasure: newUom }),
+        body: JSON.stringify({ sku_id: newSku.trim(), name: newName.trim(), category: newCategory.trim() || 'General', unit_price: Number(newPrice), reorder_point: Number(newReorderPoint), unit_of_measure: newUom.trim() || 'PCS' }),
       });
       setShowCreateModal(false);
       setNewSku(''); setNewName(''); setNewCategory(''); setNewPrice(10); setNewReorderPoint(5); setNewUom('PCS');
@@ -118,7 +118,7 @@ export default function InventoryPage() {
       const current = showAdjustModal.quantityOnHand;
       await apiRequest(`/api/v1/stock/${showAdjustModal.id.skuId}/${showAdjustModal.id.locationId}`, {
         method: 'PUT',
-        body: JSON.stringify({ quantity: current + adjustDelta, reason: 'Manual adjustment' }),
+        body: JSON.stringify({ quantity_on_hand: current + adjustDelta }),
       });
       setShowAdjustModal(null);
       setAdjustDelta(0);
@@ -130,6 +130,9 @@ export default function InventoryPage() {
 
   const getStockForProduct = (skuId: string) =>
     stocks.filter(s => s.id.skuId === skuId).reduce((sum, s) => sum + s.quantityOnHand, 0);
+
+  const getReservedForProduct = (skuId: string) =>
+    stocks.filter(s => s.id.skuId === skuId).reduce((sum, s) => sum + (s.quantityReserved ?? 0), 0);
 
   const getLowStockStyle = (skuId: string, reorderPoint: number) => {
     const qty = getStockForProduct(skuId);
@@ -212,21 +215,23 @@ export default function InventoryPage() {
                 <th>Category</th>
                 <th>Unit Price</th>
                 <th>Stock on Hand</th>
+                <th>Reserved</th>
                 <th>Status</th>
                 {canEdit && <th style={{ textAlign: 'right' }}>Actions</th>}
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={canEdit ? 6 : 5} style={{ textAlign: 'center', color: 'var(--color-ink-mute)', padding: 40 }}>Loading inventory…</td></tr>
+                <tr><td colSpan={canEdit ? 7 : 6} style={{ textAlign: 'center', color: 'var(--color-ink-mute)', padding: 40 }}>Loading inventory…</td></tr>
               ) : products.length === 0 ? (
-                <tr><td colSpan={canEdit ? 6 : 5} style={{ textAlign: 'center', color: 'var(--color-ink-mute)', padding: 40 }}>
+                <tr><td colSpan={canEdit ? 7 : 6} style={{ textAlign: 'center', color: 'var(--color-ink-mute)', padding: 40 }}>
                   <Boxes size={28} style={{ margin: '0 auto 8px', display: 'block', opacity: 0.3 }} />
                   No products found. {canEdit && 'Create your first product above.'}
                 </td></tr>
               ) : (
                 products.map((p) => {
                   const totalStock = getStockForProduct(p.skuId);
+                  const totalReserved = getReservedForProduct(p.skuId);
                   const statusClass = getLowStockStyle(p.skuId, p.reorderPoint);
                   return (
                     <tr key={p.skuId}>
@@ -242,6 +247,11 @@ export default function InventoryPage() {
                           <span className="tnum" style={{ fontWeight: 400, color: 'var(--color-ink)' }}>{totalStock}</span>
                           <span style={{ fontSize: 11, color: 'var(--color-ink-mute)' }}>{p.unitOfMeasure}</span>
                         </div>
+                      </td>
+                      <td>
+                        {totalReserved > 0
+                          ? <span className="pill-tag pill-warning tnum" style={{ fontSize: 10 }}>{totalReserved}</span>
+                          : <span style={{ color: 'var(--color-ink-mute)' }}>0</span>}
                       </td>
                       <td>
                         <span className={`pill-tag ${statusClass}`} style={{ fontSize: 9 }}>

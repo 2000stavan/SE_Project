@@ -11,6 +11,7 @@ import {
   Sparkles,
   BarChart3
 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface ForecastItem {
   sku_id: string;
@@ -39,6 +40,17 @@ interface ReorderSuggestion {
       unit_price: number;
     }>;
   };
+}
+
+interface AccuracyRow {
+  accuracyId: string;
+  skuId: string;
+  productName: string;
+  period: string;
+  predictedDemand: number;
+  actualDemand: number;
+  percentageError: number;
+  accuracyRate: number;
 }
 
 interface RevenueGroup {
@@ -78,7 +90,7 @@ interface StockData {
 }
 
 export default function ForecastPage() {
-  const [activeTab, setActiveTab] = useState<'forecast' | 'reorder' | 'revenue' | 'stock'>('forecast');
+  const [activeTab, setActiveTab] = useState<'forecast' | 'reorder' | 'accuracy' | 'revenue' | 'stock'>('forecast');
   const [loading, setLoading] = useState(false);
   const [runningJob, setRunningJob] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -98,10 +110,19 @@ export default function ForecastPage() {
 
   // Stock Analytics state
   const [stockData, setStockData] = useState<StockData | null>(null);
+  const [accuracy, setAccuracy] = useState<AccuracyRow[]>([]);
 
   useEffect(() => {
     loadAllData();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'accuracy') {
+      apiRequest<{ data: AccuracyRow[] }>('/api/v1/forecast/accuracy')
+        .then((r) => setAccuracy(r.data || []))
+        .catch((err) => setErrorMsg(err.message || 'Failed to load accuracy'));
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'revenue') {
@@ -175,7 +196,7 @@ export default function ForecastPage() {
         body: JSON.stringify(suggestion.suggested_po_payload),
       });
 
-      const poId = res.data?.po_id || 'PO';
+      const poId = res.poId || res.data?.po_id || 'PO';
       setSuccessMsg(`Draft Purchase Order ${poId} created for ${suggestion.sku_id}! Available in Purchase Orders tab.`);
       await loadReorderSuggestions();
     } catch (err: any) {
@@ -216,6 +237,7 @@ export default function ForecastPage() {
         {([
           { key:'forecast', label:'Demand Forecasts' },
           { key:'reorder', label:`Reorder ${reorderSuggestions.length > 0 ? `(${reorderSuggestions.length})` : ''}` },
+          { key:'accuracy', label:'Forecast Accuracy' },
           { key:'revenue', label:'Revenue Analytics' },
           { key:'stock', label:'Stock Views' },
         ] as const).map(t => (
@@ -277,8 +299,8 @@ export default function ForecastPage() {
                       <td><span className="pill-tag pill-neutral" style={{fontSize:9}}>{f.location_id}</span></td>
                       <td><span className="tnum" style={{ fontSize:13, color:'var(--color-ink-mute)', fontFamily:'monospace' }}>{f.forecast_period}</span></td>
                       <td style={{textAlign:'right'}}><span className="tnum" style={{ fontWeight:400, color:'var(--color-ink)' }}>{f.predicted_demand} <span style={{color:'var(--color-ink-mute)',fontSize:11}}>units/wk</span></span></td>
-                      <td style={{textAlign:'right'}}><span className="tnum" style={{ fontWeight:400, color:'#92400e' }}>{f.recommended_reorder_qty} <span style={{color:'var(--color-ink-mute)',fontSize:11}}>units</span></span></td>
-                      <td style={{textAlign:'center'}}><span className="pill-tag" style={{fontSize:9,backgroundColor:'#ecfdf5',color:'#065f46',borderColor:'#bbf7d0'}}>Weekly 7d</span></td>
+                      <td style={{textAlign:'right'}}><span className="tnum" style={{ fontWeight:400, color:'var(--c-warn-fg)' }}>{f.recommended_reorder_qty} <span style={{color:'var(--color-ink-mute)',fontSize:11}}>units</span></span></td>
+                      <td style={{textAlign:'center'}}><span className="pill-tag" style={{fontSize:9,backgroundColor:'var(--c-ok-bg)',color:'var(--c-ok-fg)',borderColor:'var(--c-ok-border)'}}>Weekly 7d</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -312,7 +334,7 @@ export default function ForecastPage() {
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, paddingTop:12, borderTop:'1px solid var(--color-hairline)', fontSize:12 }}>
                     <div>
                       <div style={{ color:'var(--color-ink-mute)', fontSize:11, marginBottom:2 }}>On Hand</div>
-                      <div className="tnum" style={{ fontWeight:400, color:'#b91c1c', fontSize:16 }}>{item.quantity_on_hand}</div>
+                      <div className="tnum" style={{ fontWeight:400, color:'var(--c-err-fg)', fontSize:16 }}>{item.quantity_on_hand}</div>
                     </div>
                     <div>
                       <div style={{ color:'var(--color-ink-mute)', fontSize:11, marginBottom:2 }}>Reorder Point</div>
@@ -324,7 +346,7 @@ export default function ForecastPage() {
                     </div>
                     <div>
                       <div style={{ color:'var(--color-ink-mute)', fontSize:11, marginBottom:2 }}>Suggested PO</div>
-                      <div className="tnum" style={{ fontWeight:400, color:'#92400e', fontSize:14 }}>+{item.suggested_order_qty} units</div>
+                      <div className="tnum" style={{ fontWeight:400, color:'var(--c-warn-fg)', fontSize:14 }}>+{item.suggested_order_qty} units</div>
                     </div>
                   </div>
                 </div>
@@ -336,6 +358,52 @@ export default function ForecastPage() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* TAB: FORECAST ACCURACY (E1.7) */}
+      {activeTab === 'accuracy' && (
+        <div className="card" style={{ padding:20 }}>
+          <div style={{ fontSize:15, color:'var(--color-ink)', marginBottom:3 }}>Predicted vs actual demand</div>
+          <div style={{ fontSize:13, color:'var(--color-ink-mute)', fontWeight:300, marginBottom:16 }}>
+            Recorded automatically when sales are processed and compared to the weekly forecast.
+          </div>
+          {accuracy.length === 0 ? (
+            <div style={{ padding:32, textAlign:'center', color:'var(--color-ink-mute)', fontSize:14 }}>
+              No accuracy data yet. Run a forecast, then record sales — comparisons appear here.
+            </div>
+          ) : (
+            <>
+              <div style={{ width:'100%', height:240, marginBottom:16 }}>
+                <ResponsiveContainer>
+                  <BarChart data={accuracy.slice(0, 12).reverse()}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,140,160,0.25)" vertical={false} />
+                    <XAxis dataKey="skuId" tick={{ fontSize:11, fill:'var(--color-ink-mute)' }} />
+                    <YAxis tick={{ fontSize:11, fill:'var(--color-ink-mute)' }} />
+                    <Tooltip contentStyle={{ background:'var(--color-canvas)', border:'1px solid var(--color-hairline)', borderRadius:8, color:'var(--color-ink)', fontSize:12 }} labelStyle={{ color:'var(--color-ink)' }} cursor={{ fill:'rgba(128,140,160,0.12)' }} />
+                    <Legend />
+                    <Bar dataKey="predictedDemand" name="Predicted" fill="#ccfbf1" radius={[4,4,0,0]} />
+                    <Bar dataKey="actualDemand" name="Actual" fill="#0d9488" radius={[4,4,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <table className="data-table" style={{ width:'100%' }}>
+                <thead><tr><th>SKU</th><th>Period</th><th style={{textAlign:'right'}}>Predicted</th><th style={{textAlign:'right'}}>Actual</th><th style={{textAlign:'right'}}>Error %</th><th style={{textAlign:'right'}}>Accuracy</th></tr></thead>
+                <tbody>
+                  {accuracy.map((a) => (
+                    <tr key={a.accuracyId}>
+                      <td>{a.productName} <span style={{ color:'var(--color-ink-mute)', fontSize:11 }}>{a.skuId}</span></td>
+                      <td>{a.period}</td>
+                      <td className="tnum" style={{textAlign:'right'}}>{a.predictedDemand}</td>
+                      <td className="tnum" style={{textAlign:'right'}}>{a.actualDemand}</td>
+                      <td className="tnum" style={{textAlign:'right'}}>{Number(a.percentageError).toFixed(1)}</td>
+                      <td style={{textAlign:'right'}}><span className={`pill-tag ${a.accuracyRate >= 80 ? 'pill-success' : a.accuracyRate >= 60 ? 'pill-warning' : 'pill-error'}`} style={{ fontSize:9 }}>{a.accuracyRate}%</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
         </div>
       )}
 
@@ -405,8 +473,8 @@ export default function ForecastPage() {
               { label:'Products', value:stockData.total_products, color:'var(--color-ink)' },
               { label:'Total Units', value:stockData.total_units_on_hand, color:'var(--color-ink)' },
               { label:'Valuation', value:`₹${Number(stockData.total_inventory_valuation).toFixed(0)}`, color:'var(--color-primary)' },
-              { label:'Low Stock', value:stockData.low_stock_count, color:'#92400e' },
-              { label:'Out of Stock', value:stockData.out_of_stock_count, color:'#b91c1c' },
+              { label:'Low Stock', value:stockData.low_stock_count, color:'var(--c-warn-fg)' },
+              { label:'Out of Stock', value:stockData.out_of_stock_count, color:'var(--c-err-fg)' },
               { label:'Overstock', value:stockData.overstock_count, color:'var(--color-primary)' },
             ].map(c => (
               <div key={c.label} style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', padding:'14px 16px', boxShadow:'var(--shadow-1)', backgroundColor:'var(--color-canvas-soft)' }}>
@@ -419,7 +487,7 @@ export default function ForecastPage() {
           <div style={{ border:'1px solid var(--color-hairline)', borderRadius:'var(--radius-lg)', overflow:'hidden', boxShadow:'var(--shadow-1)' }}>
             <div style={{ padding:'10px 16px', borderBottom:'1px solid var(--color-hairline)', backgroundColor:'var(--color-canvas-soft)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:14, fontWeight:400, color:'var(--color-ink)' }}>
-                <AlertTriangle size={14} color="#92400e" /> Low Stock Alerts ({stockData.low_stock_items.length})
+                <AlertTriangle size={14} color="var(--c-warn-fg)" /> Low Stock Alerts ({stockData.low_stock_items.length})
               </div>
               <span style={{ fontSize:11, color:'var(--color-ink-mute)' }}>Stock &le; Reorder Point</span>
             </div>
@@ -441,7 +509,7 @@ export default function ForecastPage() {
                         <div style={{ fontSize:11, fontFamily:'monospace', color:'var(--color-primary)' }}>{item.sku_id}</div>
                       </td>
                       <td><span className="pill-tag pill-neutral" style={{fontSize:9}}>{item.location_id}</span></td>
-                      <td style={{textAlign:'center'}}><span className="tnum" style={{ fontWeight:400, color:'#b91c1c', fontSize:15 }}>{item.quantity_on_hand}</span></td>
+                      <td style={{textAlign:'center'}}><span className="tnum" style={{ fontWeight:400, color:'var(--c-err-fg)', fontSize:15 }}>{item.quantity_on_hand}</span></td>
                       <td style={{textAlign:'center'}}><span className="tnum" style={{ color:'var(--color-ink-mute)' }}>{item.reorder_point}</span></td>
                       <td style={{textAlign:'right'}}><span className="tnum" style={{ color:'var(--color-ink)', fontWeight:400 }}>₹{Number(item.unit_price).toFixed(2)}</span></td>
                     </tr>

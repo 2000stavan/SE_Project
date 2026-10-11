@@ -3,6 +3,15 @@ import { apiRequest } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { Building2, Plus, Search, Star, Clock, Mail, Edit2, PowerOff, History, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 
+interface SupplierHistory {
+  totalOrders: number;
+  receivedOrders: number;
+  onTimeRate: number;
+  cancelledOrders: number;
+  activeOrders: number;
+  orders: { poId: string; status: string; orderDate: string; expectedDate: string; onTime: boolean | null }[];
+}
+
 interface Supplier {
   supplierId: string;
   name: string;
@@ -32,6 +41,7 @@ export default function SuppliersPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [historySupplier, setHistorySupplier] = useState<Supplier | null>(null);
+  const [history, setHistory] = useState<SupplierHistory | null>(null);
 
   const [name, setName] = useState('');
   const [contactDetails, setContactDetails] = useState('');
@@ -112,6 +122,14 @@ export default function SuppliersPage() {
       <Star key={i} size={11} strokeWidth={0} fill={i < filled ? '#f59e0b' : '#e3e8ee'} />
     ));
   };
+
+  useEffect(() => {
+    setHistory(null);
+    if (!historySupplier) return;
+    apiRequest<SupplierHistory>(`/api/v1/suppliers/${historySupplier.supplierId}/history`)
+      .then(setHistory)
+      .catch(() => setHistory(null));
+  }, [historySupplier]);
 
   return (
     <div>
@@ -215,7 +233,7 @@ export default function SuppliersPage() {
                         <button onClick={() => setHistorySupplier(sup)} className="btn-ghost-sm" style={{ fontSize: 12 }} title="Procurement History"><History size={12} /></button>
                         <button onClick={() => openEditModal(sup)} className="btn-ghost-sm" style={{ fontSize: 12 }} title="Edit"><Edit2 size={12} /></button>
                         {isAdmin && sup.isActive && (
-                          <button onClick={() => handleDeactivate(sup.supplierId)} className="btn-ghost-sm" style={{ fontSize: 12, color: '#b91c1c', borderColor: '#fca5a5' }} title="Deactivate (BR-5)"><PowerOff size={12} /></button>
+                          <button onClick={() => handleDeactivate(sup.supplierId)} className="btn-ghost-sm" style={{ fontSize: 12, color: 'var(--c-err-fg)', borderColor: 'var(--c-err-border)' }} title="Deactivate (BR-5)"><PowerOff size={12} /></button>
                         )}
                       </div>
                     </td>
@@ -290,6 +308,38 @@ export default function SuppliersPage() {
                 <span className="tnum" style={{ fontWeight: 400, color: 'var(--color-ink)', fontSize: 16 }}>{historySupplier.leadTime} days</span>
               </div>
             </div>
+            {history && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 12 }}>
+                  {[
+                    ['On-time rate', `${history.onTimeRate}%`],
+                    ['Total POs', history.totalOrders],
+                    ['Received', history.receivedOrders],
+                    ['Cancelled', history.cancelledOrders],
+                  ].map(([label, value]) => (
+                    <div key={String(label)} style={{ padding: '8px 10px', background: 'var(--color-canvas-soft)', borderRadius: 8, border: '1px solid var(--color-hairline)' }}>
+                      <div style={{ fontSize: 9, color: 'var(--color-ink-mute)', textTransform: 'uppercase' }}>{label}</div>
+                      <div className="tnum" style={{ fontSize: 16, color: 'var(--color-ink)' }}>{value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--color-ink-mute)', textTransform: 'uppercase', letterSpacing: '0.1px', marginBottom: 6 }}>Past purchase orders</div>
+                <div style={{ maxHeight: 150, overflowY: 'auto', border: '1px solid var(--color-hairline)', borderRadius: 8 }}>
+                  {history.orders.length === 0 ? (
+                    <div style={{ padding: 12, fontSize: 12, color: 'var(--color-ink-mute)' }}>No purchase orders yet.</div>
+                  ) : history.orders.map((o) => (
+                    <div key={o.poId} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '7px 12px', fontSize: 12, borderBottom: '1px solid var(--color-hairline)' }}>
+                      <span>{o.poId}</span>
+                      <span style={{ color: 'var(--color-ink-mute)' }}>{o.status}</span>
+                      <span className="tnum" style={{ color: 'var(--color-ink-mute)' }}>due {o.expectedDate || '—'}</span>
+                      <span style={{ color: o.onTime === null ? 'var(--color-ink-mute)' : o.onTime ? 'var(--c-ok-fg)' : 'var(--c-err-fg)' }}>
+                        {o.onTime === null ? 'open' : o.onTime ? 'on time' : 'late/cancelled'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
               <div style={{ fontSize: 10, color: 'var(--color-ink-mute)', textTransform: 'uppercase', letterSpacing: '0.1px', marginBottom: 8 }}>Performance Event Log (BR-4)</div>
               <div style={{ background: 'var(--color-canvas-soft)', border: '1px solid var(--color-hairline)', borderRadius: 8, padding: '12px 14px', fontFamily: 'monospace', fontSize: 12, color: 'var(--color-ink-secondary)', maxHeight: 200, overflowY: 'auto', whiteSpace: 'pre-wrap' }}>

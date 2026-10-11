@@ -270,13 +270,13 @@ export default function SalesPage() {
     setSimResult(null);
 
     try {
-      const res = await apiRequest<any>('/api/v1/dev/simulate-marketplace-order', {
+      const res = await apiRequest<any>(`/api/v1/sales/dev/simulate-marketplace-order?marketplace=${encodeURIComponent(simMarketplace)}`, {
         method: 'POST',
         body: JSON.stringify({
-          marketplace: simMarketplace,
-          sku_id: simSku.trim(),
-          quantity: Number(simQty),
-          price: Number(simPrice),
+          order_id: `SIM-${Date.now()}`,
+          event: 'order-paid',
+          customer_info: `Simulated ${simMarketplace} buyer`,
+          lines: [{ sku_id: simSku.trim(), quantity: Number(simQty), location_id: 'WH-01', unit_price: Number(simPrice) }],
         }),
       });
       setSimResult(res);
@@ -395,7 +395,7 @@ export default function SalesPage() {
                         </td>
                         <td style={{ textAlign:'right' }}><span className="tnum" style={{ fontWeight:400, color:'var(--color-ink)', fontSize:14 }}>₹{(line.quantity*line.unit_price).toFixed(2)}</span></td>
                         <td style={{ textAlign:'right' }}>
-                          <button type="button" onClick={() => removeFromCart(line.sku_id)} className="btn-ghost-sm" style={{ color:'#b91c1c', borderColor:'#fca5a5' }}><Trash2 size={12} /></button>
+                          <button type="button" onClick={() => removeFromCart(line.sku_id)} className="btn-ghost-sm" style={{ color:'var(--c-err-fg)', borderColor:'var(--c-err-border)' }}><Trash2 size={12} /></button>
                         </td>
                       </tr>
                     ))}

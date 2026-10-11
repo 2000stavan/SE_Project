@@ -300,7 +300,7 @@ export default function PurchaseOrdersPage() {
               padding: '5px 14px', borderRadius: 'var(--radius-pill)',
               fontSize: 13, fontWeight: statusFilter === tab.value ? 400 : 300,
               border: statusFilter === tab.value ? '1px solid var(--color-primary)' : '1px solid var(--color-hairline)',
-              backgroundColor: statusFilter === tab.value ? 'rgba(83,58,253,0.08)' : 'transparent',
+              backgroundColor: statusFilter === tab.value ? 'rgba(13,148,136,0.08)' : 'transparent',
               color: statusFilter === tab.value ? 'var(--color-primary)' : 'var(--color-ink-mute)',
               cursor: 'pointer', transition: 'all 0.15s',
             }}
@@ -336,7 +336,7 @@ export default function PurchaseOrdersPage() {
                     <tr key={po.poId}>
                       <td>
                         <div style={{ fontWeight: 400, color: 'var(--color-ink)', fontFamily: 'monospace', fontSize: 13 }}>{po.poId}</div>
-                        {isOverdue && <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#854d0e', marginTop: 2 }}><AlertTriangle size={10} />OVERDUE</div>}
+                        {isOverdue && <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--c-warn-fg)', marginTop: 2 }}><AlertTriangle size={10} />OVERDUE</div>}
                       </td>
                       <td>
                         <div style={{ fontWeight: 400, fontSize: 14, color: 'var(--color-ink)' }}>{po.supplierName}</div>
@@ -360,15 +360,15 @@ export default function PurchaseOrdersPage() {
                           {po.status === 'Draft' && isManagerOrAdmin && <button onClick={() => handleSubmit(po.poId)} className="btn-ghost-sm" style={{ fontSize: 12, color: 'var(--color-primary)', borderColor: 'var(--color-primary-bg-subdued)' }}>Submit</button>}
                           {po.status === 'Pending Approval' && isManagerOrAdmin && (
                             <>
-                              <button onClick={() => handleApprove(po.poId)} className="btn-ghost-sm" style={{ fontSize: 12, color: '#166534', borderColor: '#bbf7d0' }}>Approve</button>
-                              <button onClick={() => setRejectingPoId(po.poId)} className="btn-ghost-sm" style={{ fontSize: 12, color: '#b91c1c', borderColor: '#fca5a5' }}>Reject</button>
+                              <button onClick={() => handleApprove(po.poId)} className="btn-ghost-sm" style={{ fontSize: 12, color: 'var(--c-ok-fg)', borderColor: 'var(--c-ok-border)' }}>Approve</button>
+                              <button onClick={() => setRejectingPoId(po.poId)} className="btn-ghost-sm" style={{ fontSize: 12, color: 'var(--c-err-fg)', borderColor: 'var(--c-err-border)' }}>Reject</button>
                             </>
                           )}
                           {(po.status === 'Approved' || po.status === 'Partially Received') && isWarehouse && (
                             <button onClick={() => openReceiveModal(po)} className="btn-ghost-sm" style={{ fontSize: 12 }}><Truck size={11} /> Receive</button>
                           )}
                           {(['Draft','Pending Approval','Approved'].includes(po.status)) && isManagerOrAdmin && (
-                            <button onClick={() => handleCancel(po.poId)} className="btn-ghost-sm" style={{ fontSize: 12, color: '#b91c1c', borderColor: '#fca5a5' }} title="Cancel"><Ban size={11} /></button>
+                            <button onClick={() => handleCancel(po.poId)} className="btn-ghost-sm" style={{ fontSize: 12, color: 'var(--c-err-fg)', borderColor: 'var(--c-err-border)' }} title="Cancel"><Ban size={11} /></button>
                           )}
                         </div>
                       </td>
@@ -436,7 +436,7 @@ export default function PurchaseOrdersPage() {
             <textarea required rows={3} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="e.g. Total exceeds budget cap" className="input" style={{ fontSize: 14, resize: 'vertical', marginBottom: 16 }} />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button onClick={() => setRejectingPoId(null)} className="btn-ghost-sm">Cancel</button>
-              <button onClick={handleRejectConfirm} className="btn-primary-sm" style={{ backgroundColor: '#b91c1c' }}>Confirm Rejection</button>
+              <button onClick={handleRejectConfirm} className="btn-primary-sm" style={{ backgroundColor: 'var(--c-err-fg)' }}>Confirm Rejection</button>
             </div>
           </div>
         </div>
