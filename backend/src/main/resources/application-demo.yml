@@ -1,0 +1,7 @@
+spring:
+  config:
+    activate:
+      on-profile: demo
+
+isms:
+  demo-seed: true

@@ -20,8 +20,8 @@ test-frontend:
 	cd frontend && npm run test --if-present
 
 seed:
-	@echo "Seeding demo data (profile 'demo' is enabled by default in backend)"
-	curl -s -X POST http://localhost:8080/api/v1/dev/seed || true
+	@echo "Demo data is seeded automatically on backend startup (SPRING_PROFILES_ACTIVE=demo, set in docker-compose.yml)."
+	@echo "To re-seed from scratch run: make reset && make up"
 
 reset: down
 	docker compose down -v
