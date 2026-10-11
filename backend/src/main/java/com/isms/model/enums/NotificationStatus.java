@@ -6,7 +6,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum NotificationStatus {
     PENDING("Pending"),
     SENT("Sent"),
-    FAILED("Failed");
+    FAILED("Failed"),
+    READ("Read");
 
     private final String value;
 

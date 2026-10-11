@@ -34,6 +34,9 @@ public class Notification {
     @Column(name = "status", length = 12, nullable = false)
     private NotificationStatus status = NotificationStatus.PENDING;
 
+    @Column(name = "read_at")
+    private OffsetDateTime readAt;
+
     public Notification() {}
 
     public Notification(String notificationId, User user, NotificationType type, NotificationChannel channel, String message, OffsetDateTime timestamp, NotificationStatus status) {
@@ -100,6 +103,14 @@ public class Notification {
 
     public void setStatus(NotificationStatus status) {
         this.status = status;
+    }
+
+    public OffsetDateTime getReadAt() {
+        return readAt;
+    }
+
+    public void setReadAt(OffsetDateTime readAt) {
+        this.readAt = readAt;
     }
 
     @Override

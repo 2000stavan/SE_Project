@@ -13,6 +13,7 @@ import java.util.List;
 @Repository
 public interface SalesOrderLineItemRepository extends JpaRepository<SalesOrderLineItem, SalesOrderLineItemId> {
     List<SalesOrderLineItem> findByIdOrderId(String orderId);
+    boolean existsByIdSkuId(String skuId);
 
     @Query("SELECT li FROM SalesOrderLineItem li JOIN FETCH li.salesOrder so " +
            "WHERE li.id.skuId = :skuId AND li.locationId = :locationId " +

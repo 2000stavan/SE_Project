@@ -10,4 +10,5 @@ import java.util.List;
 @Repository
 public interface PoLineItemRepository extends JpaRepository<PoLineItem, PoLineItemId> {
     List<PoLineItem> findByIdPoId(String poId);
+    boolean existsByIdSkuId(String skuId);
 }

@@ -10,6 +10,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, String> {
     Optional<User> findByEmail(String email);
     Optional<User> findByUserId(String userId);
+    java.util.List<User> findByRole(com.isms.model.enums.Role role);
 
     default Optional<User> findByUserIdOrEmail(String identifier) {
         if (identifier == null) return Optional.empty();

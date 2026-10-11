@@ -11,6 +11,7 @@ public class StockRecord {
     @EmbeddedId
     private StockRecordId id;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore // lazy proxy is not serializable; the SKU is already in id.skuId
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("skuId")
     @JoinColumn(name = "sku_id", nullable = false)
