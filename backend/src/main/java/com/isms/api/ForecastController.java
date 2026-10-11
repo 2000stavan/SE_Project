@@ -70,4 +70,11 @@ public class ForecastController {
         List<Map<String, Object>> suggestions = forecastService.getReorderSuggestions();
         return ResponseEntity.ok(Map.of("data", suggestions));
     }
+
+    @GetMapping("/accuracy")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'MANAGER')")
+    public ResponseEntity<Map<String, Object>> getAccuracyTracking(@RequestParam(required = false) String sku) {
+        List<Map<String, Object>> records = forecastService.getAccuracyTracking(sku);
+        return ResponseEntity.ok(Map.of("data", records));
+    }
 }

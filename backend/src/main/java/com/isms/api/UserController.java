@@ -49,7 +49,7 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, Object>> createUser(@RequestBody CreateUserRequest request) {
+    public ResponseEntity<Map<String, Object>> createUser(@RequestBody @jakarta.validation.Valid CreateUserRequest request) {
         Role role = Role.fromValue(request.role());
         User created = administratorService.createUser(
                 request.user_id(),
@@ -70,7 +70,7 @@ public class UserController {
     @PatchMapping("/{id}/role")
     public ResponseEntity<Map<String, Object>> updateRole(
             @PathVariable("id") String id,
-            @RequestBody UpdateRoleRequest request
+            @RequestBody @jakarta.validation.Valid UpdateRoleRequest request
     ) {
         Role role = Role.fromValue(request.role());
         User updated = administratorService.assignRole(id, role);
@@ -83,7 +83,7 @@ public class UserController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<Map<String, Object>> updateStatus(
             @PathVariable("id") String id,
-            @RequestBody UpdateStatusRequest request
+            @RequestBody @jakarta.validation.Valid UpdateStatusRequest request
     ) {
         UserStatus status = UserStatus.fromValue(request.status());
         User updated = administratorService.updateUserStatus(id, status);

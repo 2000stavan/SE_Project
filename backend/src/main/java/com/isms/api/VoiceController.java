@@ -33,7 +33,7 @@ public class VoiceController {
 
     @PostMapping("/command")
     @PreAuthorize("hasAnyRole('WAREHOUSE_STAFF', 'ADMINISTRATOR', 'MANAGER')")
-    public ResponseEntity<Map<String, Object>> captureVoiceCommand(@RequestBody VoiceCommandRequest request) {
+    public ResponseEntity<Map<String, Object>> captureVoiceCommand(@RequestBody @jakarta.validation.Valid VoiceCommandRequest request) {
         Map<String, Object> result = warehouseStaffService.captureVoiceCommand(
                 request.transcript(),
                 request.confidence(),
@@ -44,7 +44,7 @@ public class VoiceController {
 
     @PostMapping("/confirm")
     @PreAuthorize("hasAnyRole('WAREHOUSE_STAFF', 'ADMINISTRATOR', 'MANAGER')")
-    public ResponseEntity<Map<String, Object>> confirmVoiceCommand(@RequestBody VoiceConfirmRequest request) {
+    public ResponseEntity<Map<String, Object>> confirmVoiceCommand(@RequestBody @jakarta.validation.Valid VoiceConfirmRequest request) {
         Map<String, Object> result = warehouseStaffService.confirmVoiceCommand(request.token(), request.confirmed());
         return ResponseEntity.ok(result);
     }

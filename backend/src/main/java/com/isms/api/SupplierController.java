@@ -70,6 +70,13 @@ public class SupplierController {
         ));
     }
 
+    @GetMapping("/{id}/history")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'MANAGER')")
+    public ResponseEntity<Map<String, Object>> getHistory(@PathVariable("id") String id) {
+        Map<String, Object> history = supplierService.getSupplierHistory(id);
+        return ResponseEntity.ok(history);
+    }
+
     @PostMapping("/{id}/deactivate")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<Supplier> deactivate(@PathVariable("id") String id) {

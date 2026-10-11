@@ -43,7 +43,7 @@ public class StockController {
     public ResponseEntity<StockRecord> updateStock(
             @PathVariable("sku") String sku,
             @PathVariable("location") String location,
-            @RequestBody UpdateStockRequest request
+            @RequestBody @jakarta.validation.Valid UpdateStockRequest request
     ) {
         StockRecord updated = stockRecordService.updateStock(sku, location, request.quantity_on_hand());
         return ResponseEntity.ok(updated);
@@ -51,7 +51,7 @@ public class StockController {
 
     @PostMapping("/adjust")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'MANAGER', 'WAREHOUSE_STAFF')")
-    public ResponseEntity<StockRecord> adjustStock(@RequestBody AdjustStockRequest request) {
+    public ResponseEntity<StockRecord> adjustStock(@RequestBody @jakarta.validation.Valid AdjustStockRequest request) {
         StockRecord result;
         if (request.delta() < 0) {
             result = stockRecordService.deductStock(request.sku(), request.location(), Math.abs(request.delta()));

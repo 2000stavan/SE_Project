@@ -14,7 +14,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
-    open-in-view: false
+    # Controllers serialize lazy associations (PO supplier/product, etc.) after the service transaction closes.
+    open-in-view: true
   flyway:
     enabled: true
     locations: classpath:db/migration

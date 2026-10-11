@@ -64,8 +64,8 @@ class RbacMatrixTest {
                         .header("Authorization", "Bearer " + salesToken))
                 .andExpect(status().isForbidden());
 
-        // Unauthenticated -> 401 Unauthorized or 403 Forbidden
+        // Unauthenticated -> 401 Unauthorized (UI session-timeout handling depends on 401, not 403)
         mockMvc.perform(get("/api/v1/users"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 }

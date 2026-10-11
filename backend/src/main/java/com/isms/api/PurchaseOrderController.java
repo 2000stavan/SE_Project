@@ -55,7 +55,8 @@ public class PurchaseOrderController {
         String supId = request.supplier_id() != null ? request.supplier_id() : request.supplierId();
         LocalDate expDate = request.expected_date() != null ? request.expected_date() : request.expectedDate();
         PurchaseOrder created = purchaseOrderService.create(supId, expDate, request.lines());
-        return ResponseEntity.status(201).body(serializePo(created));
+        // Re-load: save() on an assigned-id entity merges, leaving lazy product proxies that cannot be read after the session closes.
+        return ResponseEntity.status(201).body(serializePo(purchaseOrderService.getPurchaseOrder(created.getPoId())));
     }
 
     @PostMapping("/{id}/submit")

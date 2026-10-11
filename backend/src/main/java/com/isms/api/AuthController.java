@@ -55,13 +55,13 @@ public class AuthController {
     }
 
     @PostMapping("/password-reset/request")
-    public ResponseEntity<Map<String, String>> requestPasswordReset(@RequestBody PasswordResetInitRequest request) {
+    public ResponseEntity<Map<String, String>> requestPasswordReset(@RequestBody @jakarta.validation.Valid PasswordResetInitRequest request) {
         userService.resetPassword(request.email());
         return ResponseEntity.ok(Map.of("message", "If an account with that email exists, a reset link has been dispatched"));
     }
 
     @PostMapping("/password-reset/confirm")
-    public ResponseEntity<Map<String, String>> confirmPasswordReset(@RequestBody PasswordResetConfirmRequest request) {
+    public ResponseEntity<Map<String, String>> confirmPasswordReset(@RequestBody @jakarta.validation.Valid PasswordResetConfirmRequest request) {
         userService.resetPassword(request.token(), request.new_password());
         return ResponseEntity.ok(Map.of("message", "Password has been successfully reset"));
     }

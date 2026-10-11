@@ -57,7 +57,7 @@ public class ProductController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'MANAGER', 'WAREHOUSE_STAFF')")
-    public ResponseEntity<Product> createProduct(@RequestBody CreateProductRequest request) {
+    public ResponseEntity<Product> createProduct(@RequestBody @jakarta.validation.Valid CreateProductRequest request) {
         Product p = new Product(
                 request.sku_id(),
                 request.name(),
