@@ -36,6 +36,9 @@ public class StockRecordService {
     @org.springframework.beans.factory.annotation.Autowired
     private StockRecordService self;
 
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager em;
+
     public StockRecordService(
             StockRecordRepository stockRecordRepository,
             ProductRepository productRepository,
@@ -106,6 +109,10 @@ public class StockRecordService {
 
         StockRecord stock = stockRecordRepository.findBySkuIdAndLocationIdForUpdate(skuId, locationId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "STOCK_NOT_FOUND", "Stock record not found"));
+        // If this transaction already loaded the row (e.g. the availability pre-check in SalesOrderService), Hibernate
+        // returns the cached, possibly stale entity even though the row is now locked. Reload the committed state, otherwise
+        // two concurrent sales of the last unit both pass the BR-3 check (lost update).
+        em.refresh(stock);
 
         if (stock.getQuantityOnHand() - delta < 0) {
             throw new ApiException(HttpStatus.CONFLICT, "INSUFFICIENT_STOCK", "Insufficient stock on hand to deduct (BR-3)");
