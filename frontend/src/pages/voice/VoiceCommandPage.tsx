@@ -315,13 +315,13 @@ export default function VoiceCommandPage() {
         </div>
         <form onSubmit={(e: FormEvent) => { e.preventDefault(); setConfidence(0.9); handleProcessTranscript(typedCommand, 0.9); }} style={{ display:'flex', gap:8, marginBottom:12 }}>
           <input type="text" value={typedCommand} onChange={e => setTypedCommand(e.target.value)}
-            placeholder="e.g. add 20 units of SKU-1001 to location WH-01"
+            placeholder="e.g. add 20 units of SKU-001 to location WH-01"
             className="input" style={{ flex:1, fontSize:14, fontFamily:'monospace' }} />
           <button type="submit" className="btn-primary-sm"><Send size={13} /> Process</button>
         </form>
         <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:8, fontSize:12, color:'var(--color-ink-mute)' }}>
           <span>Examples:</span>
-          {[{label:'Add 20 · SKU-1001',cmd:'add 20 units of SKU-1001 to location WH-01'},{label:'Remove 5 units',cmd:'remove five units of SKU-1001 from location WH-01'},{label:'Set 3 (low stock)',cmd:'set 3 units of SKU-1001 in location WH-01'}].map(ex=>(
+          {[{label:'Add 20 · SKU-001',cmd:'add 20 units of SKU-001 to location WH-01'},{label:'Remove 5 units',cmd:'remove five units of SKU-001 from location WH-01'},{label:'Set 3 (low stock)',cmd:'set 3 units of SKU-001 in location WH-01'}].map(ex=>(
             <button key={ex.cmd} type="button" onClick={() => setTypedCommand(ex.cmd)} style={{ fontSize:12, color:'var(--color-primary)', background:'none', border:'none', cursor:'pointer', textDecoration:'underline', textDecorationStyle:'dotted' }}>{ex.label}</button>
           ))}
         </div>

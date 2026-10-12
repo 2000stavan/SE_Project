@@ -14,7 +14,7 @@ interface QuickAccount {
 }
 
 const DEMO_ACCOUNTS: QuickAccount[] = [
-  { label: 'Alice Admin',        id: 'USR-ADMIN-1',  role: 'Administrator',    icon: ShieldCheck,  accent: 'var(--color-brand-dark-900)' },
+  { label: 'Alice Admin',        id: 'USR-ADMIN-1',  role: 'Administrator',    icon: ShieldCheck,  accent: '#0ea5e9' },
   { label: 'Bob Manager',        id: 'USR-MGR-1',    role: 'Manager',           icon: UserCheck,    accent: 'var(--color-primary)' },
   { label: 'Charlie Warehouse',  id: 'USR-WH-1',     role: 'Warehouse Staff',   icon: Package,      accent: '#9b6829' },
   { label: 'Dave Sales',         id: 'USR-SALES-1',  role: 'Sales Personnel',   icon: ShoppingCart, accent: '#166534' },

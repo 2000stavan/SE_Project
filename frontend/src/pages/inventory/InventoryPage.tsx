@@ -1,7 +1,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { apiRequest } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { Boxes, Search, Plus, RefreshCw, AlertTriangle, Radio, X } from 'lucide-react';
+import { Boxes, Search, Plus, RefreshCw, AlertTriangle, Radio, X, Pencil, Trash2 } from 'lucide-react';
 
 interface Product {
   skuId: string;
@@ -47,6 +47,15 @@ export default function InventoryPage() {
   const [newUom, setNewUom] = useState('PCS');
   const [createError, setCreateError] = useState<string | null>(null);
 
+  // Update / delete product (Inventory.CRUD.Update, Inventory.CRUD.Delete)
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', category: '', unitPrice: 0, reorderPoint: 0, unitOfMeasure: '' });
+  const [editError, setEditError] = useState<string | null>(null);
+  const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const canDelete = user?.role === 'Administrator' || user?.role === 'Manager';
   const canEdit = user?.role === 'Administrator' || user?.role === 'Manager' || user?.role === 'Warehouse Staff';
 
   const fetchData = async () => {
@@ -125,6 +134,43 @@ export default function InventoryPage() {
       fetchData();
     } catch (err) {
       setAdjustError(err instanceof Error ? err.message : 'Adjustment failed');
+    }
+  };
+
+  const openEdit = (p: Product) => {
+    setEditProduct(p);
+    setEditError(null);
+    setEditForm({ name: p.name, category: p.category, unitPrice: Number(p.unitPrice), reorderPoint: p.reorderPoint, unitOfMeasure: p.unitOfMeasure });
+  };
+
+  const handleEditProduct = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editProduct) return;
+    setEditError(null);
+    try {
+      await apiRequest(`/api/v1/products/${editProduct.skuId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: editForm.name.trim(), category: editForm.category.trim(), unit_price: Number(editForm.unitPrice), reorder_point: Number(editForm.reorderPoint), unit_of_measure: editForm.unitOfMeasure.trim() }),
+      });
+      setNotice(`Product ${editProduct.skuId} updated.`);
+      setEditProduct(null);
+      fetchData();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Update failed');
+    }
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!deleteProduct) return;
+    setDeleteError(null);
+    try {
+      await apiRequest(`/api/v1/products/${deleteProduct.skuId}`, { method: 'DELETE' });
+      setNotice(`Product ${deleteProduct.skuId} deleted.`);
+      setDeleteProduct(null);
+      fetchData();
+    } catch (err) {
+      // 409: stock on hand or order history exists (Inventory.CRUD.Delete)
+      setDeleteError(err instanceof Error ? err.message : 'Delete failed');
     }
   };
 
@@ -260,6 +306,8 @@ export default function InventoryPage() {
                       </td>
                       {canEdit && (
                         <td style={{ textAlign: 'right' }}>
+                          <button className="btn-icon" title="Edit product" aria-label={`Edit ${p.skuId}`} onClick={() => openEdit(p)} style={{ marginRight: 6 }}><Pencil size={13} /></button>
+                          {canDelete && <button className="btn-icon" title="Delete product" aria-label={`Delete ${p.skuId}`} onClick={() => { setDeleteProduct(p); setDeleteError(null); }} style={{ marginRight: 6 }}><Trash2 size={13} /></button>}
                           {stocks.filter(s => s.id.skuId === p.skuId).map(s => (
                             <button
                               key={`${s.id.skuId}-${s.id.locationId}`}
@@ -358,6 +406,53 @@ export default function InventoryPage() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button onClick={() => setShowAdjustModal(null)} className="btn-ghost-sm">Cancel</button>
               <button onClick={handleAdjustStock} className="btn-primary-sm">Apply Adjustment</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {notice && (
+        <div className="banner-success" style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 60, boxShadow: 'var(--shadow-2)' }} onClick={() => setNotice(null)}>{notice}</div>
+      )}
+
+      {/* Edit Product Modal */}
+      {editProduct && (
+        <div className="modal-overlay">
+          <div className="modal-box" role="dialog" aria-label="Edit product">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div className="text-heading-sm" style={{ color: 'var(--color-ink)' }}>Edit product · {editProduct.skuId}</div>
+              <button onClick={() => setEditProduct(null)} className="btn-ghost-sm" style={{ padding: '4px 8px' }} aria-label="Close"><X size={14} /></button>
+            </div>
+            {editError && <div className="banner-error" style={{ marginBottom: 12 }}>{editError}</div>}
+            <form onSubmit={handleEditProduct} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="form-group"><label className="form-label">Name</label><input className="input" required value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} /></div>
+              <div className="form-group"><label className="form-label">Category</label><input className="input" required value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })} /></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                <div className="form-group"><label className="form-label">Unit price</label><input className="input" type="number" step="0.01" min={0} required value={editForm.unitPrice} onChange={e => setEditForm({ ...editForm, unitPrice: Number(e.target.value) })} /></div>
+                <div className="form-group"><label className="form-label">Reorder point</label><input className="input" type="number" min={0} required value={editForm.reorderPoint} onChange={e => setEditForm({ ...editForm, reorderPoint: Number(e.target.value) })} /></div>
+                <div className="form-group"><label className="form-label">Unit</label><input className="input" required value={editForm.unitOfMeasure} onChange={e => setEditForm({ ...editForm, unitOfMeasure: e.target.value })} /></div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 4 }}>
+                <button type="button" className="btn-ghost-sm" onClick={() => setEditProduct(null)}>Cancel</button>
+                <button type="submit" className="btn-primary-sm">Save changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Product Modal */}
+      {deleteProduct && (
+        <div className="modal-overlay">
+          <div className="modal-box" role="dialog" aria-label="Delete product" style={{ maxWidth: 420 }}>
+            <div className="text-heading-sm" style={{ color: 'var(--color-ink)', marginBottom: 8 }}>Delete {deleteProduct.name}?</div>
+            <div style={{ fontSize: 13, color: 'var(--color-ink-mute)', marginBottom: 12 }}>
+              A product can only be deleted when its stock is zero in every location and it has no order history (SRS Inventory.CRUD.Delete).
+            </div>
+            {deleteError && <div className="banner-error" style={{ marginBottom: 12 }}>{deleteError}</div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button className="btn-ghost-sm" onClick={() => setDeleteProduct(null)}>Cancel</button>
+              <button className="btn-danger" onClick={handleDeleteProduct}><Trash2 size={13} /> Delete</button>
             </div>
           </div>
         </div>

@@ -99,8 +99,17 @@ export default function SalesPage() {
   const loadOrders = async () => {
     setLoadingOrders(true);
     try {
-      const res = await apiRequest<{ data: SalesOrder[] }>('/api/v1/sales');
-      setOrders(res.data || []);
+      // API: plain array of order summaries (camelCase) with totalAmount; lines are loaded on demand for returns
+      const res = await apiRequest<any[]>('/api/v1/sales');
+      setOrders((Array.isArray(res) ? res : []).map((o) => ({
+        order_id: o.orderId,
+        channel: o.channel,
+        order_date: o.createdAt,
+        status: o.status,
+        total_amount: Number(o.totalAmount || 0),
+        payment_method: o.paymentReference || 'N/A',
+        lines: [],
+      })));
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to load sales orders');
     } finally {
@@ -172,12 +181,12 @@ export default function SalesPage() {
         })),
       };
 
-      const res = await apiRequest<{ data: SalesOrder }>('/api/v1/sales/physical', {
+      const res = await apiRequest<{ orderId: string }>('/api/v1/sales/physical', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
 
-      const orderId = res.data?.order_id;
+      const orderId = res.orderId;
       setSuccessMsg(`Sale ${orderId} completed successfully! Stock deducted and invoice created.`);
       setLastInvoiceOrderId(orderId);
       setCart([]);
@@ -218,13 +227,25 @@ export default function SalesPage() {
   };
 
   // Open Return Modal
-  const openReturnModal = (order: SalesOrder) => {
-    setReturnModalOrder(order);
-    const initialQtys: Record<string, number> = {};
-    order.lines.forEach((l) => {
-      initialQtys[l.sku_id] = l.quantity;
-    });
-    setReturnQuantities(initialQtys);
+  const openReturnModal = async (order: SalesOrder) => {
+    setErrorMsg(null);
+    try {
+      const d = await apiRequest<any>(`/api/v1/sales/${order.order_id}`);
+      const lines: SalesOrderLine[] = (d.lines || []).map((l: any, i: number) => ({
+        id: i,
+        sku_id: l.skuId,
+        quantity: l.quantity,
+        unit_price: Number(l.unitPrice),
+      }));
+      const initialQtys: Record<string, number> = {};
+      lines.forEach((l) => {
+        initialQtys[l.sku_id] = l.quantity;
+      });
+      setReturnQuantities(initialQtys);
+      setReturnModalOrder({ ...order, lines });
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to load order');
+    }
   };
 
   // Process Return
@@ -515,7 +536,7 @@ export default function SalesPage() {
               </div>
               <div>
                 <label style={{ display:'block', fontSize:12, color:'var(--color-ink-mute)', marginBottom:5 }}>Target Product SKU</label>
-                <input type="text" value={simSku} onChange={e => setSimSku(e.target.value)} placeholder="e.g. SKU-1001" className="input" style={{fontSize:14, fontFamily:'monospace'}} required />
+                <input type="text" value={simSku} onChange={e => setSimSku(e.target.value)} placeholder="e.g. SKU-001" className="input" style={{fontSize:14, fontFamily:'monospace'}} required />
                 {products.length > 0 && (
                   <div style={{ marginTop:8, display:'flex', flexWrap:'wrap', gap:4 }}>
                     {products.slice(0,4).map(p => (
@@ -567,7 +588,7 @@ export default function SalesPage() {
               <input type="text" value={returnReason} onChange={e => setReturnReason(e.target.value)} className="input" style={{fontSize:14}} required />
             </div>
             <div>
-              <div style={{fontSize:12,color:'var(--color-ink-mute)',marginBottom:8}}>Select Quantities to Restock</div>
+              <div style={{fontSize:12,color:'var(--color-ink-mute)',marginBottom:8}}>Items restocked (the whole order is returned)</div>
               <div style={{ border:'1px solid var(--color-hairline)', borderRadius:8, overflow:'hidden', maxHeight:220, overflowY:'auto' }}>
                 {returnModalOrder.lines.map(line => (
                   <div key={line.sku_id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', borderBottom:'1px solid var(--color-hairline)' }}>
@@ -577,7 +598,7 @@ export default function SalesPage() {
                     </div>
                     <div style={{display:'flex',alignItems:'center',gap:8}}>
                       <label style={{fontSize:11,color:'var(--color-ink-mute)'}}>Qty:</label>
-                      <input type="number" min={0} max={line.quantity} value={returnQuantities[line.sku_id]??line.quantity}
+                      <input type="number" min={0} max={line.quantity} readOnly title="The whole order is returned and restocked" value={returnQuantities[line.sku_id]??line.quantity}
                         onChange={e => setReturnQuantities({...returnQuantities,[line.sku_id]:Number(e.target.value)})}
                         className="input" style={{width:72,fontSize:14,textAlign:'center'}} />
                     </div>
