@@ -38,9 +38,9 @@ Without Docker: local Postgres (`isms`/`isms`), then `cd backend && SPRING_PROFI
 ## 4. Tests
 
 ```bash
-cd backend && ./mvnw test          # 56 tests (needs Postgres isms/isms on localhost:5432)
+cd backend && ./mvnw test          # 70 tests (needs Postgres isms/isms on localhost:5432)
 cd frontend && npm test            # Vitest
-bash scripts/smoke_test.sh         # 50 live API checks against a running demo backend
+bash scripts/smoke_test.sh         # 53 live API checks against a running demo backend
 ./scripts/load_test.sh             # latency / concurrency benchmark (PE-1, PE-3)
 ```
 
