@@ -40,9 +40,9 @@ check "delete blocked while stock>0 -> 409" 409 "$(req DELETE /products/$SKU "$M
 check "sales cannot create product -> 403" 403 "$(req POST /products "$S" '{"sku_id":"X","name":"x","category":"T","unit_of_measure":"PCS","unit_price":1,"reorder_point":1}')"
 
 echo "Suppliers & purchase orders"
-check "admin creates supplier" 201 "$(req POST /suppliers "$A" '{"name":"Smoke Supplies","contactDetails":"smoke@example.com","leadTime":5}')"
+newsup=$(req POST /suppliers "$A" '{"name":"Smoke Supplies","contactDetails":"smoke@example.com","leadTime":5}'); check "admin creates supplier" 201 "$newsup"
 sups=$(req GET /suppliers "$M"); check "list suppliers" 200 "$sups"
-SUP=$(jget "$(body "$sups")" "[0]['supplierId']")
+SUP=$(jget "$(body "$newsup")" "['supplierId']")   # a fresh supplier: independent of credit used by earlier data (BR-2)
 check "supplier history" 200 "$(req GET /suppliers/$SUP/history "$M")"
 po=$(req POST /purchase-orders "$M" "{\"supplier_id\":\"$SUP\",\"expected_date\":\"2027-01-01\",\"lines\":[{\"sku_id\":\"$SKU\",\"quantity\":10}]}"); check "create PO (draft)" 201 "$po"
 PO=$(jget "$(body "$po")" "['poId']")
@@ -77,6 +77,9 @@ check "admin lists users" 200 "$(req GET /users "$A")"
 check "manager cannot list users -> 403" 403 "$(req GET /users "$M")"
 check "admin audit log" 200 "$(req GET /admin/audit-log "$A")"
 check "manager audit log -> 403" 403 "$(req GET /admin/audit-log "$M")"
+check "low-stock update (stock 2 < reorder point 5)" 200 "$(req PUT "/stock/$SKU/WH-01" "$M" '{"quantity_on_hand":2}')"
+nl=$(req GET /notifications "$M"); check "notifications inbox with data (manager)" 200 "$nl"
+[ "$(python -c "import sys,json; print(len(json.loads(sys.argv[1])))" "$(body "$nl")")" -gt 0 ] && { PASS=$((PASS+1)); echo "  ok   low-stock alert was created"; } || { FAIL=$((FAIL+1)); echo "  FAIL no low-stock alert in inbox"; }
 check "notifications inbox" 200 "$(req GET /notifications "$W")"
 prefs=$(req GET /notifications/preferences "$W"); check "get preferences" 200 "$prefs"
 check "save preferences" 200 "$(req PUT /notifications/preferences "$W" "{\"preferences\":$(body "$prefs")}")"

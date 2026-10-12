@@ -2,14 +2,14 @@
 """
 Module-by-module repo builder for the ISMS hand-off (see github.md).
 
-The finished project lives in one tree. This script slices it into 9 ordered modules so the
+The finished project lives in one tree. This script slices it into 8 ordered modules so the
 new repository can be built up in alternating pushes (odd modules: Dev, even: Stavan), and
 every push still compiles.
 
   python scripts/module_split.py list                      # modules, owners, file counts
   python scripts/module_split.py check                     # every source file assigned to exactly 1 module?
   python scripts/module_split.py apply 3 ../isms-new       # copy module 3 (+ regenerate shared files) into a checkout
-  python scripts/module_split.py verify [--tests]          # build modules 1..9 cumulatively in a temp dir,
+  python scripts/module_split.py verify [--tests]          # build modules 1..8 cumulatively in a temp dir,
                                                            # compile backend + type-check frontend at each step
 
 `apply N` only ADDS module N's files and regenerates the two shared frontend files
@@ -34,7 +34,8 @@ DEV, STAVAN = "Dev", "Stavan"
 
 # (id, name, owner, [glob patterns relative to repo root])
 MODULES = [
-    (1, "Foundation & Data Layer", DEV, [
+    (1, "Authentication & Role-Based Access Control (+ project foundation)", DEV, [
+        # project foundation: every later module builds on these
         ".gitignore", ".env.example", "docker-compose.yml", "Makefile",
         "backend/pom.xml", "backend/mvnw", "backend/mvnw.cmd", "backend/.mvn/**", "backend/Dockerfile", "backend/storage/invoices/.gitkeep",
         f"{J}/IsmsApplication.java", f"{J}/config/AppProperties.java", f"{J}/error/**", f"{J}/model/**", f"{J}/repository/**",
@@ -42,74 +43,79 @@ MODULES = [
         f"{R}/application.yml", f"{R}/db/migration/**",
         f"{T}/SchemaMatchesSpecTest.java", "backend/src/test/resources/**",
         "frontend/package.json", "frontend/package-lock.json", "frontend/tsconfig.json", "frontend/vite.config.ts",
-        "frontend/tailwind.config.js", "frontend/postcss.config.js", "frontend/index.html", "frontend/public/favicon.svg", "frontend/Dockerfile", "frontend/nginx.conf",
-        f"{F}/index.css", f"{F}/api/client.ts",
+        "frontend/tailwind.config.js", "frontend/postcss.config.js", "frontend/index.html", "frontend/public/favicon.svg",
+        "frontend/Dockerfile", "frontend/nginx.conf", f"{F}/index.css", f"{F}/api/client.ts",
         "moodle/moodle.md", "schema.md", "plan.md", "feature.md", "api-spec.md", "implementationplan.md", "agent-prompt.md", "docs/source/**",
-    ]),
-    (2, "Auth, RBAC, Audit & App Shell", STAVAN, [
+        # Auth & RBAC (SRS 4.1)
         f"{J}/audit/**", f"{J}/security/**", f"{J}/domain/UserService.java", f"{J}/domain/AdministratorService.java",
         f"{J}/api/AuthController.java", f"{J}/api/UserController.java", f"{J}/api/AdminController.java",
         f"{J}/api/SettingsController.java", f"{J}/api/HealthController.java",
         f"{T}/AuthIntegrationTest.java", f"{T}/BcryptTest.java", f"{T}/RbacMatrixTest.java", f"{T}/AdminTest.java", f"{T}/HealthControllerTest.java",
-        f"{F}/main.tsx", f"{F}/App.tsx", f"{F}/App.test.tsx", f"{F}/components/Layout.tsx", f"{F}/components/OnboardingModal.tsx", f"{F}/components/ThemeToggle.tsx", f"{F}/components/Logo.tsx",
+        f"{F}/main.tsx", f"{F}/App.tsx", f"{F}/App.test.tsx", f"{F}/components/Layout.tsx", f"{F}/components/OnboardingModal.tsx",
+        f"{F}/components/ThemeToggle.tsx", f"{F}/components/Logo.tsx",
         f"{F}/context/**", f"{F}/types/**", f"{F}/pages/auth/**", f"{F}/pages/dashboard/**", f"{F}/pages/admin/**",
     ]),
-    (3, "Notifications & Real-time Channels", DEV, [
-        f"{J}/domain/NotificationService.java", f"{J}/api/NotificationController.java", f"{J}/websocket/**",
-        f"{J}/config/WebSocketConfig.java", f"{J}/adapter/impl/StubChannelAdapters.java",
-        f"{F}/pages/notifications/**",
-    ]),
-    (4, "Inventory & Stock (C1)", STAVAN, [
+    (2, "Voice-Enabled Inventory & Omnichannel Synchronization", STAVAN, [
         f"{J}/domain/ProductService.java", f"{J}/domain/StockRecordService.java",
         f"{J}/api/ProductController.java", f"{J}/api/StockController.java",
-        f"{T}/StockConcurrencyTest.java",
+        f"{J}/domain/voice/**", f"{T}/StockConcurrencyTest.java",
+        # shared dependency: stock changes raise low-stock alerts and push to WebSocket clients, so the
+        # notification engine and real-time channels ship here (the notification UI is Module 7)
+        f"{J}/domain/NotificationService.java", f"{J}/websocket/**", f"{J}/config/WebSocketConfig.java",
+        f"{J}/adapter/impl/StubChannelAdapters.java",
         f"{F}/pages/inventory/**",
     ]),
-    (5, "Suppliers (C2a)", DEV, [
+    (3, "Supplier Management", DEV, [
         f"{J}/domain/SupplierService.java", f"{J}/api/SupplierController.java",
         f"{F}/pages/suppliers/**",
     ]),
-    (6, "Purchase Orders, Receiving & Voice (C2b, C1.7)", STAVAN, [
+    (4, "Purchase Order (PO) Management", STAVAN, [
         f"{J}/domain/PurchaseOrderService.java", f"{J}/domain/ManagerService.java", f"{J}/domain/WarehouseStaffService.java",
-        f"{J}/domain/voice/**", f"{J}/api/PurchaseOrderController.java", f"{J}/api/VoiceController.java",
+        f"{J}/api/PurchaseOrderController.java", f"{J}/api/VoiceController.java",
         f"{T}/Seq1InventoryTest.java", f"{T}/Seq2PurchaseOrderTest.java", f"{T}/PoStateMachineTest.java", f"{T}/VoiceInterpreterTest.java",
         f"{F}/pages/purchaseOrders/**", f"{F}/pages/voice/**",
     ]),
-    (7, "Forecasting & Analytics (E1)", DEV, [
+    (5, "Sales Tracking & Order Management", DEV, [
+        f"{J}/domain/SalesOrderService.java", f"{J}/domain/SalesPersonnelService.java", f"{J}/domain/SaleRecordedEvent.java",
+        f"{J}/api/SalesController.java",
+        f"{T}/Seq3SalesTest.java", f"{T}/WebhookSecurityTest.java", f"{T}/SalesConcurrencyTest.java",
+        "scripts/simulate_marketplace.sh",
+        f"{F}/pages/sales/**",
+    ]),
+    (6, "Predictive Analytics & AI Forecasting", STAVAN, [
         f"{J}/domain/ForecastService.java", f"{J}/api/ForecastController.java", f"{J}/api/AnalyticsController.java",
         f"{T}/ForecastTest.java",
         f"{F}/pages/forecast/**",
     ]),
-    (8, "Sales, POS & Marketplace Webhooks (C3)", STAVAN, [
-        f"{J}/domain/SalesOrderService.java", f"{J}/domain/SalesPersonnelService.java", f"{J}/api/SalesController.java",
-        f"{T}/Seq3SalesTest.java", f"{T}/WebhookSecurityTest.java",
-        "scripts/simulate_marketplace.sh",
-        f"{F}/pages/sales/**",
+    (7, "Multimodal Notification System", DEV, [
+        f"{J}/api/NotificationController.java",
+        f"{F}/pages/notifications/**",
     ]),
-    (9, "Demo Data, Hardening & Docs", DEV, [
+    (8, "Platform Hardening: Demo Data, NFR Tests and Documentation", STAVAN, [
         f"{J}/config/DemoDataSeeder.java", f"{R}/application-demo.yml",
         f"{T}/NfrTest.java", f"{T}/ClassContractTest.java", f"{T}/ClassDiagramStructureTest.java",
         "scripts/load_test.sh", "scripts/smoke_test.sh", "scripts/module_split.py",
         "README.md", "PROGRESS.md", "docs/traceability.md", "docs/class-diagram-mapping.md", "github.md",
+        "docs/Dev_Gaglani_2024300057_SE_Exp8.docx", "docs/Dev_Gaglani_2024300057_SE_Exp8.pdf",
     ]),
 ]
 
 # Shared frontend files are regenerated per stage: lines that mention a not-yet-pushed module's page are dropped.
 APP_DROP = {
-    3: ["NotificationsPage", "NotificationPreferencesPage"],
-    4: ["InventoryPage"],
-    5: ["SuppliersPage"],
-    6: ["PurchaseOrdersPage", "VoiceCommandPage"],
-    7: ["ForecastPage"],
-    8: ["SalesPage"],
+    2: ["InventoryPage"],
+    3: ["SuppliersPage"],
+    4: ["PurchaseOrdersPage", "VoiceCommandPage"],
+    5: ["SalesPage"],
+    6: ["ForecastPage"],
+    7: ["NotificationsPage", "NotificationPreferencesPage"],
 }
 NAV_DROP = {
-    3: ["path: '/notifications'"],
-    4: ["path: '/inventory'"],
-    5: ["path: '/suppliers'"],
-    6: ["path: '/purchase-orders'", "path: '/voice'"],
-    7: ["path: '/forecast'"],
-    8: ["path: '/sales'"],
+    2: ["path: '/inventory'"],
+    3: ["path: '/suppliers'"],
+    4: ["path: '/purchase-orders'", "path: '/voice'"],
+    5: ["path: '/sales'"],
+    6: ["path: '/forecast'"],
+    7: ["path: '/notifications'"],
 }
 
 EXCLUDE_DIRS = {"node_modules", "target", "dist", ".git", ".claude", "__pycache__"}
@@ -203,7 +209,7 @@ def cmd_apply(n, dest):
             tgt.write_text(shared_file(rel, n), encoding="utf8", newline="\n")
         else:
             shutil.copy2(ROOT / rel, tgt)
-    if n > 2:  # regenerate shared files for this stage
+    if n > 1:  # regenerate shared files for this stage
         for rel in (f"{F}/App.tsx", f"{F}/components/Layout.tsx"):
             (dest / rel).write_text(shared_file(rel, n), encoding="utf8", newline="\n")
     print(f"M{n}: copied {len(mine)} files into {dest}" + (" (+ regenerated App.tsx, Layout.tsx)" if n > 2 else ""))
@@ -230,7 +236,7 @@ def cmd_verify(with_tests):
         goal = "test" if with_tests else "test-compile"
         r = run(f"{mvn} -q {goal}", tmp / "backend")
         be = r.returncode == 0
-        r2 = run("npx tsc --noEmit", tmp / "frontend") if mid >= 2 else None
+        r2 = run("npx tsc --noEmit", tmp / "frontend") if mid >= 1 else None
         fe = True if r2 is None else r2.returncode == 0
         print(f"  M{mid} backend {goal}: {'OK' if be else 'FAIL'}   frontend tsc: {'OK' if fe else 'FAIL'}   ({name})")
         if not be:
