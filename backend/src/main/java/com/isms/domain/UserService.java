@@ -47,6 +47,9 @@ public class UserService {
         this.auditLogger = auditLogger;
     }
 
+    // noRollbackFor: the 5th failed login throws ACCOUNT_LOCKED *after* setting status=locked; that change must be
+    // committed, otherwise the lock exists only in memory and the Administrator never sees (or can unlock) the account.
+    @Transactional(noRollbackFor = ApiException.class)
     public Map<String, Object> login(String identifier, String password) {
         if (identifier == null || identifier.isBlank() || password == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_INPUT", "Identifier and password are required");

@@ -72,6 +72,49 @@ class AuthIntegrationTest {
     }
 
     @Test
+    @DisplayName("F1.2: the lock is persisted as users.status = locked and an Administrator can unlock it")
+    void testLockIsPersistedAndAdminCanUnlock() throws Exception {
+        String uid = "lock-persist-" + System.currentTimeMillis();
+
+        String adminToken = objectMapper.readTree(mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"user_id\":\"USR-ADMIN-1\",\"password\":\"Password123!\"}"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).get("token").asText();
+
+        mockMvc.perform(post("/api/v1/users")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("{\"user_id\":\"%s\",\"name\":\"Lock Test\",\"email\":\"%s@isms.com\",\"role\":\"Sales Personnel\",\"password\":\"Password123!\"}", uid, uid)))
+                .andExpect(status().is2xxSuccessful());
+
+        for (int i = 0; i < 4; i++) {
+            mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                    .content(String.format("{\"user_id\":\"%s\",\"password\":\"bad\"}", uid))).andExpect(status().isUnauthorized());
+        }
+        // the 5th failure locks the account (403) ...
+        mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content(String.format("{\"user_id\":\"%s\",\"password\":\"bad\"}", uid))).andExpect(status().isForbidden());
+
+        // ... and the status must be visible to the Administrator (regression: the change used to roll back with the exception)
+        String users = mockMvc.perform(get("/api/v1/users").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        JsonNode row = null;
+        for (JsonNode n : objectMapper.readTree(users)) {
+            if (uid.equals(n.get("userId").asText())) row = n;
+        }
+        assertNotNull(row);
+        org.junit.jupiter.api.Assertions.assertEquals("locked", row.get("status").asText());
+
+        // Administrator unlocks; the correct password works again
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/users/" + uid + "/status")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"active\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content(String.format("{\"user_id\":\"%s\",\"password\":\"Password123!\"}", uid))).andExpect(status().isOk());
+    }
+
+    @Test
     @DisplayName("F1.6: Sliding token expiration returned in X-Refreshed-Token header")
     void testSlidingTokenHeader() throws Exception {
         // Login first
