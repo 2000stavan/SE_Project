@@ -109,7 +109,17 @@ public class SalesController {
         }
 
         List<SalesOrder> list = salesOrderService.listOrders(channel, status, from, to);
-        List<Map<String, Object>> response = list.stream().map(this::serializeOrderSummary).toList();
+        List<Map<String, Object>> response = list.stream().map(o -> {
+            Map<String, Object> m = serializeOrderSummary(o);
+            // the list view shows the order total and size without a second request per row
+            List<SalesOrderLineItem> items = salesOrderService.getLineItems(o.getOrderId());
+            java.math.BigDecimal total = items.stream()
+                    .map(i -> i.getUnitPrice().multiply(java.math.BigDecimal.valueOf(i.getQuantity())))
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+            m.put("totalAmount", total);
+            m.put("lineCount", items.size());
+            return m;
+        }).toList();
         return ResponseEntity.ok(response);
     }
 

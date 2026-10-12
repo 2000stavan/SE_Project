@@ -50,6 +50,9 @@ class Seq3SalesTest {
     private SalesOrderRepository salesOrderRepository;
 
     @Autowired
+    private com.isms.repository.NotificationRepository notificationRepository;
+
+    @Autowired
     private CallTrace callTrace;
 
     @BeforeEach
@@ -179,6 +182,14 @@ class Seq3SalesTest {
         // Verify stock was not deducted (remains 2)
         StockRecord stock = stockRecordRepository.findByIdSkuIdAndIdLocationId(sku, loc).orElseThrow();
         assertEquals(2, stock.getQuantityOnHand(), "Stock must not be deducted when order is rejected");
+
+        // Sales.Stock.Insufficient: the REJECTED order is kept and the Manager is notified (must survive the rollback)
+        boolean rejectedKept = salesOrderRepository.findAllByOrderByCreatedAtDesc().stream()
+                .anyMatch(o -> o.getStatus() == SalesStatus.REJECTED && "Customer Bob".equals(o.getCustomerInfo()));
+        assertTrue(rejectedKept, "a REJECTED order must be recorded");
+        boolean managerNotified = notificationRepository.findByUserUserIdOrderByTimestampDesc("USR-MGR-1").stream()
+                .anyMatch(n -> n.getMessage().contains(sku));
+        assertTrue(managerNotified, "the Manager must be notified about the insufficient stock");
 
         // Verify message trace
         List<String> calls = callTrace.getCalls();

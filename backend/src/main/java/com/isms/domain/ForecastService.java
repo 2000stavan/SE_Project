@@ -508,6 +508,12 @@ public class ForecastService {
         return (int) Math.round(Math.max(1.0, weeklyForecast));
     }
 
+    // Forecast.Accuracy.Track: every recorded sale feeds the forecast-vs-actual comparison
+    @org.springframework.context.event.EventListener
+    public void onSaleRecorded(SaleRecordedEvent event) {
+        recordActualDemand(event.skuId(), event.quantity());
+    }
+
     // GAP-04: Forecast.Accuracy.Track — record predicted vs actual demand
     public void recordActualDemand(String skuId, int quantitySold) {
         LocalDate now = LocalDate.now();

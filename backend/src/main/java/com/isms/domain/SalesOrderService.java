@@ -53,9 +53,8 @@ public class SalesOrderService {
     @org.springframework.beans.factory.annotation.Autowired
     private SalesOrderService self;
 
-    @Lazy
     @org.springframework.beans.factory.annotation.Autowired
-    private ForecastService forecastService;
+    private org.springframework.context.ApplicationEventPublisher events;
 
     public SalesOrderService(
             SalesOrderRepository salesOrderRepository,
@@ -79,6 +78,21 @@ public class SalesOrderService {
         this.objectMapper = objectMapper;
     }
 
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void recordRejectedOrder(String orderId, String channel, String customerInfo, String skuId, int available, int requested) {
+        SalesOrder rejectedOrder = new SalesOrder(orderId, channel, customerInfo, SalesStatus.REJECTED, null, OffsetDateTime.now());
+        salesOrderRepository.save(rejectedOrder);
+
+        notificationService.triggerInsufficientStock(skuId, orderId);
+
+        auditLogger.log(orderId, "SALES_ORDER_REJECTED", "sales_orders", Map.of(
+                "reason", "INSUFFICIENT_STOCK",
+                "sku_id", skuId,
+                "available", available,
+                "requested", requested
+        ));
+    }
+
     public Map<String, Object> createOrder(String channel, String customerInfo, List<Map<String, Object>> lines) {
         if (lines == null || lines.isEmpty()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_LINES", "Order must contain at least one line item");
@@ -100,18 +114,9 @@ public class SalesOrderService {
             int available = (stock != null) ? stock.getQuantityOnHand() : 0;
 
             if (available < qty) {
-                // Reject order (Sales.Stock.Insufficient)
-                SalesOrder rejectedOrder = new SalesOrder(orderId, channel, customerInfo, SalesStatus.REJECTED, null, OffsetDateTime.now());
-                salesOrderRepository.save(rejectedOrder);
-
-                notificationService.triggerInsufficientStock(skuId, orderId);
-
-                auditLogger.log(orderId, "SALES_ORDER_REJECTED", "sales_orders", Map.of(
-                        "reason", "INSUFFICIENT_STOCK",
-                        "sku_id", skuId,
-                        "available", available,
-                        "requested", qty
-                ));
+                // Reject order (Sales.Stock.Insufficient): recorded in its own transaction so the REJECTED order and the
+                // manager notification are kept even though this sale aborts and rolls back.
+                (self != null ? self : this).recordRejectedOrder(orderId, channel, customerInfo, skuId, available, qty);
 
                 throw new ApiException(HttpStatus.CONFLICT, "INSUFFICIENT_STOCK",
                         String.format("Insufficient stock for SKU %s at location %s (available: %d, requested: %d)",
@@ -150,8 +155,8 @@ public class SalesOrderService {
         // 4. Deduct stock for all line items and record actual demand
         for (SalesOrderLineItem item : savedOrder.getLineItems()) {
             stockRecordService.deductStock(item.getProduct().getSkuId(), item.getLocationId(), item.getQuantity());
-            if (forecastService != null) {
-                forecastService.recordActualDemand(item.getProduct().getSkuId(), item.getQuantity());
+            if (events != null) {
+                events.publishEvent(new SaleRecordedEvent(item.getProduct().getSkuId(), item.getQuantity()));
             }
         }
 
@@ -223,8 +228,8 @@ public class SalesOrderService {
             List<SalesOrderLineItem> items = salesOrderLineItemRepository.findByIdOrderId(order.getOrderId());
             for (SalesOrderLineItem item : items) {
                 stockRecordService.deductStock(item.getProduct().getSkuId(), item.getLocationId(), item.getQuantity());
-                if (forecastService != null) {
-                    forecastService.recordActualDemand(item.getProduct().getSkuId(), item.getQuantity());
+                if (events != null) {
+                    events.publishEvent(new SaleRecordedEvent(item.getProduct().getSkuId(), item.getQuantity()));
                 }
             }
 
