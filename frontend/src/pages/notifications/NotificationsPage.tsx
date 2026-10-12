@@ -7,8 +7,10 @@ interface NotificationItem {
   notificationId: string;
   type: string;
   message: string;
-  status: 'Unread' | 'Read';
-  createdAt: string;
+  channel?: string;
+  status: string; // API: Pending | Sent | Failed | Read (locally added alerts use 'Unread')
+  timestamp?: string;
+  createdAt?: string;
 }
 
 export default function NotificationsPage() {
@@ -105,8 +107,8 @@ export default function NotificationsPage() {
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {notifications.map((item) => {
-            const isUnread = item.status === 'Unread';
-            const isLowStock = item.type === 'LOW_STOCK';
+            const isUnread = item.status !== 'Read';
+            const isLowStock = /low/i.test(item.type);
             return (
               <div key={item.notificationId}
                 style={{
@@ -128,7 +130,7 @@ export default function NotificationsPage() {
                         backgroundColor: isLowStock ? 'var(--c-warn-bg)' : 'rgba(13,148,136,0.08)',
                         color: isLowStock ? 'var(--c-warn-fg)' : 'var(--color-primary)',
                         borderColor: isLowStock ? 'var(--c-warn-border)' : 'rgba(13,148,136,0.25)' }}>
-                        {item.type}
+                        {item.type}{item.channel ? ` · ${item.channel}` : ''}
                       </span>
                       {isUnread && (
                         <span style={{ fontSize:9, padding:'2px 6px', borderRadius:4, backgroundColor:'rgba(13,148,136,0.12)', color:'var(--color-primary)', fontWeight:400, letterSpacing:'0.06em' }}>NEW</span>
@@ -137,7 +139,7 @@ export default function NotificationsPage() {
                     <div style={{ fontSize:14, color:'var(--color-ink)', fontWeight:300, marginBottom:6 }}>{item.message}</div>
                     <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'var(--color-ink-mute)' }}>
                       <Clock size={11} />
-                      <span className="tnum">{new Date(item.createdAt).toLocaleString()}</span>
+                      <span className="tnum">{new Date((item.timestamp || item.createdAt) as string).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>

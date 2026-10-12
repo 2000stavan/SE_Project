@@ -15,6 +15,7 @@ public class Notification {
     @Column(name = "notification_id", length = 40, nullable = false)
     private String notificationId;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore // lazy User proxy is not serializable; recipients only ever read their own
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
